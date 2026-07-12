@@ -1,0 +1,33 @@
+# Secrets and local config — only the .example files are ever committed
+.env
+.env.*
+config.yaml
+persona.yaml
+*.key
+*.pem
+credentials*.json
+
+# All agent storage
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

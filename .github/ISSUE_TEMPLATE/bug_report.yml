@@ -1,0 +1,47 @@
+name: Bug Report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can we trigger this?
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: elifelse version
+      description: Output of `elifelse --version`
+      placeholder: "0.1.0"
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider
+      options:
+        - LM Studio (local)
+        - Ollama (local)
+        - OpenAI API
+        - Anthropic API
+        - OpenRouter
+        - Other API
+        - Mock
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "Windows 11 / Ubuntu 24.04 / macOS 15"

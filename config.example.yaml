@@ -1,0 +1,114 @@
+# Everything except secrets. Copy to config.yaml (or run `elifelse init`).
+# Secrets go in .env; reference them here by environment-variable name only.
+
+# Your name — how the agent refers to you. Set during setup or change anytime.
+developer_name: "Developer"
+
+# All storage (memories, logs, saves, journal, backups) lives under this one folder.
+# Point it at a bigger drive if you like; move the folder + update this to relocate.
+data_dir: "./data"
+
+provider:
+  kind: "openai_compat"        # "openai_compat" or "mock"
+  base_url: "http://127.0.0.1:1234/v1"  # LM Studio default; Ollama: http://127.0.0.1:11434/v1
+  api_key_env: ""              # name of the env var holding the API key ("" = none, local)
+  model: "publisher/model-name"
+  utility_model: ""            # optional second model for summaries/extraction ("" = use main)
+  max_context_tokens: 36000
+  chars_per_token: 3
+  request_timeout: 300
+  # Pacing: randomized delay before each in-character response, in seconds.
+  # Helps your GPU rest between calls if running locally, and gives more natural
+  # response times. lifelike = 1..40, instant = 0..0, or set your own.
+  response_delay_min: 1
+  response_delay_max: 40
+  # Daily token budget across ALL calls (background included). 0 = unlimited.
+  # NEVER leave 0 on a paid API unless you truly mean it — when the cap is hit the
+  # agent auto-sleeps until the daily reset.
+  daily_token_budget: 0
+  # Optional LM Studio add-on: auto-load the model via the `lms` CLI with the right
+  # context length. Only used when the `lms` command exists.
+  lmstudio_loader: false
+  quirks:
+    no_think_suffix: false     # append "/no_think" to user turns (some Qwen builds)
+
+# Per-model generation parameters. "default" is the fallback; add entries keyed by
+# your exact model name to override. *_raw values are used for background/utility calls.
+#
+# Note: repeat_penalty, top_k, and chat_template_kwargs are supported by local backends
+# (LM Studio, Ollama, etc.) but NOT by some cloud APIs (e.g. OpenAI). If the API rejects
+# a parameter, the framework auto-removes it and retries. The setup wizard's connection
+# test will also strip unsupported params from this file automatically.
+model_params:
+  default:
+    temperature: 0.7
+    temperature_raw: 0.3
+    top_p: 0.95
+    top_k: 0
+    repeat_penalty: 1.05       # local backends only; auto-removed for OpenAI/Anthropic
+    max_tokens: 3000
+    max_tokens_raw: 4000
+    chat_template_kwargs: null # e.g. {enable_thinking: false} for models that need it
+
+day_cycle:
+  enabled: true                # false = always-on, no sleep
+  bedtime: "22:00"
+  wake_time: "08:00"
+  nap_durations: [20, 60, 120] # minutes offered in the nap menu
+
+memory:
+  enabled: true
+  batch_size: 6                # messages per background extraction batch
+  direct_threshold: 0.85       # source-specific recall distance threshold
+  global_threshold: 0.55       # global fallback recall distance threshold
+  max_recall: 3                # max memories injected per recall
+  max_facts: 15                # hard cap on stored facts per profile
+
+summary:
+  chunk_chars: 400000          # transcripts longer than this are chunk-summarized
+
+inner_life:
+  enabled: true                # emotions, surveys, self-facts, profiles (one switch)
+
+environment:
+  enabled: true
+  weather: true                # live weather via Open-Meteo (free, no key)
+  current: "hillside_cabin"
+  locations:
+    - key: "hillside_cabin"
+      name: "Hillside Cabin"
+      description: "A small wooden cabin on a quiet hillside, with a desk by the window."
+      latitude: 44.05
+      longitude: -71.68
+    - key: "city_loft"
+      name: "City Loft"
+      description: "A bright loft apartment above a busy street, plants on the sill."
+      latitude: 40.71
+      longitude: -74.01
+    - key: "seaside_cottage"
+      name: "Seaside Cottage"
+      description: "A weathered cottage near the shore; you can hear gulls outside."
+      latitude: 43.66
+      longitude: -70.25
+
+backup:
+  enabled: true                # nightly zip of data/ during sleep, kept locally
+
+status:
+  websocket_enabled: false     # localhost WebSocket status broadcaster (for overlays)
+  websocket_port: 8765
+
+dashboard:
+  enabled: true                # localhost web dashboard (status, logs, memory browser)
+  port: 8080                   # http://127.0.0.1:8080
+
+logging:
+  level: "INFO"
+
+# Per-activity settings. Each activity reads its own section (see its docs).
+activities:
+  chat:
+    message_timeout: 180       # seconds to wait for a reply
+  eat: {}
+  journal: {}
+  ponder: {}

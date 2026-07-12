@@ -1,0 +1,6 @@
+{
+  "_comment": "Module trust manifest. The registry checks this at load time.",
+  "_updated": "2026-07-08",
+  "official": {},
+  "approved": {}
+}
