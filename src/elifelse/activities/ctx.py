@@ -148,3 +148,15 @@ class ActivityContext:
             activity_type=self.activity.key,
             rules=self.activity.memory_rules,
         )
+
+    def remember_game(self, role: str, content: str, subject: str = "") -> None:
+        """Buffer a game message for 3-msg-merge extraction (no classifier)."""
+        if self.app.memory is None:
+            return
+        self.app.memory.push_game_message(
+            session_key=f"{self.activity.key}_{subject}" if subject else self.activity.key,
+            role=role,
+            content=content,
+            source=subject or self.activity.key,
+            activity_type=self.activity.key,
+        )

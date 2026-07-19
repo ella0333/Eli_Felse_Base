@@ -77,7 +77,10 @@ async def run_activity(app: App, activity: Activity, subject: str = "") -> str:
     # 5e. flush buffered memory extraction for this activity
     if app.memory is not None:
         session_key = f"{activity.key}_{subject}" if subject else activity.key
-        await app.memory.flush_remaining(session_key)
+        if activity.memory_mode == "game_batch":
+            await app.memory.flush_game_remaining(session_key)
+        else:
+            await app.memory.flush_remaining(session_key)
 
     # 5f. restore + compact injection (isolated activities only)
     if activity.isolate_context:

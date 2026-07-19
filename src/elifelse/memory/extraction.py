@@ -21,6 +21,58 @@ if TYPE_CHECKING:
 FACTS = "facts"
 MEMORIES = "memories"
 
+_GAME_SYSTEM = (
+    "You summarize gameplay events into concise first-person memories. "
+    "Respond with only the summary text, no JSON."
+)
+
+
+async def summarize_game_batch(
+    provider: Provider,
+    store: MemoryStore,
+    messages: list[dict[str, Any]],
+) -> int:
+    """Merge a batch of game messages into one concise gameplay memory.
+    No is_fact/is_memory judgment — everything gets summarized and stored."""
+    if not messages:
+        return 0
+
+    lines = []
+    for msg in messages:
+        role_label = "Agent" if msg["role"] == "assistant" else msg.get("source", "Game")
+        lines.append(f"{role_label}: {msg['content']}")
+    messages_block = "\n\n".join(lines)
+
+    prompt = (
+        "Summarize these gameplay events into one concise gameplay note "
+        "in first person past tense. Focus on what happened and what matters "
+        "for future play. Include specifics like locations, items, NPCs, "
+        "scores, deaths, and puzzle solutions. Write 1-3 sentences.\n\n"
+        f"Gameplay events:\n{messages_block}"
+    )
+
+    text = await provider.raw_completion(
+        [
+            {"role": "system", "content": _GAME_SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    if not text or not text.strip():
+        print_system("game batch summarization returned empty; batch dropped")
+        return 0
+
+    summary = text.strip().strip('"').strip()
+    sample = messages[0]
+    meta = {
+        "source": sample.get("source", ""),
+        "activity_type": sample.get("activity_type", ""),
+        "timestamp": messages[-1].get("timestamp", ""),
+        "keywords": "gameplay",
+    }
+    await store.add(MEMORIES, summary, meta)
+    print_system(f"game memory stored: \"{summary[:80]}\"")
+    return 1
+
 _SYSTEM = (
     "You are a memory extraction assistant. You will receive a numbered batch "
     "of conversation messages. For EACH message decide:\n"

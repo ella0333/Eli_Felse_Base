@@ -96,6 +96,8 @@ class DayCycleConfig(BaseModel):
 class MemoryConfig(BaseModel):
     enabled: bool = True
     batch_size: int = 6
+    game_batch_size: int = 3         # batch size for game_batch memory mode
+    game_dedup_threshold: float = 0.95  # similarity threshold for game memory dedup
     direct_threshold: float = 0.65
     global_threshold: float = 0.85
     max_recall: int = 3

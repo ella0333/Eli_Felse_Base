@@ -27,6 +27,7 @@ class Activity(ABC):
     # ~~~ behavior declarations ~~~
     schemas: dict[str, dict[str, Any]] = {}  # module schemas, registered at load
     isolate_context: bool = False  # snapshot/restore context around it (games, long reads)
+    memory_mode: str = "standard"  # "standard" or "game_batch" (3-msg merge, no classifier)
     memory_rules: str = ""         # extraction guidance ("" = base default)
     survey: str | None = None      # survey type after the activity, or None
 
