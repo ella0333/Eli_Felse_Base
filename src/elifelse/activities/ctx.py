@@ -149,7 +149,7 @@ class ActivityContext:
             rules=self.activity.memory_rules,
         )
 
-    def remember_game(self, role: str, content: str, subject: str = "") -> None:
+    def remember_game(self, role: str, content: str, subject: str = "", save_state: str = "") -> None:
         """Buffer a game message for 3-msg-merge extraction (no classifier)."""
         if self.app.memory is None:
             return
@@ -159,4 +159,5 @@ class ActivityContext:
             content=content,
             source=subject or self.activity.key,
             activity_type=self.activity.key,
+            save_state=save_state,
         )

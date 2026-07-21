@@ -100,20 +100,22 @@ class MemorySystem:
         content: str,
         source: str = "",
         activity_type: str = "",
+        save_state: str = "",
     ) -> None:
         """Game-specific memory push. Every game_batch_size messages get merged
         into a single gameplay memory (no classifier judgment)."""
         game_key = f"game_{session_key}"
         buf = self.buffers.setdefault(game_key, [])
-        buf.append(
-            {
-                "role": role,
-                "content": content,
-                "source": source or session_key,
-                "activity_type": activity_type,
-                "timestamp": self.clock().isoformat(),
-            }
-        )
+        msg: dict[str, Any] = {
+            "role": role,
+            "content": content,
+            "source": source or session_key,
+            "activity_type": activity_type,
+            "timestamp": self.clock().isoformat(),
+        }
+        if save_state:
+            msg["save_state"] = save_state
+        buf.append(msg)
         if len(buf) >= self.config.game_batch_size:
             batch = buf[: self.config.game_batch_size]
             del buf[: self.config.game_batch_size]

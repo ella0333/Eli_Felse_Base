@@ -67,8 +67,11 @@ async def summarize_game_batch(
         "source": sample.get("source", ""),
         "activity_type": sample.get("activity_type", ""),
         "timestamp": messages[-1].get("timestamp", ""),
-        "keywords": "gameplay",
+        "keywords": ", ".join(["gameplay", sample.get("activity_type", "")]),
     }
+    save_state = sample.get("save_state", "")
+    if save_state:
+        meta["save_state"] = save_state
     await store.add(MEMORIES, summary, meta)
     print_system(f"game memory stored: \"{summary[:80]}\"")
     return 1
