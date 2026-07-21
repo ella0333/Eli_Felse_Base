@@ -73,7 +73,7 @@ async def summarize_game_batch(
     if save_state:
         meta["save_state"] = save_state
     await store.add(MEMORIES, summary, meta)
-    print_system(f"game memory stored: \"{summary[:80]}\"")
+    print_system("game memory stored")
     return 1
 
 _SYSTEM = (
