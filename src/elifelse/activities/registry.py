@@ -23,6 +23,7 @@ import importlib.metadata
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -143,6 +144,7 @@ class ActivityRegistry:
                 )
                 assert spec and spec.loader
                 module = importlib.util.module_from_spec(spec)
+                sys.modules[spec.name] = module
                 spec.loader.exec_module(module)
             except Exception as e:
                 self.skipped.append((folder.name, f"failed to import: {e}"))
