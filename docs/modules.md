@@ -17,7 +17,7 @@ The registry prints a tier label when loading each module:
 
 | Module | Tier | Author | Needs keys? | Posts publicly? | Description |
 |---|---|---|---|---|---|
-| _(none yet)_ | | | | | |
+| [Text RPG](https://github.com/ella0333/Eli_Felse_Text_RPG) | Official | ella0333 | No | No | Text-based RPG module (Zork and other Z-machine games) |
 
 ## Getting your module listed
 
