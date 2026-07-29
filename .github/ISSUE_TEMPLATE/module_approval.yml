@@ -1,0 +1,72 @@
+name: Module Approval Request
+description: Submit a module for review and listing in MODULES.md
+title: "[Module] "
+labels: ["module-review"]
+body:
+  - type: input
+    id: module_name
+    attributes:
+      label: Module name
+      description: The key your activity uses (e.g. "chess", "tarot")
+      placeholder: my_module
+    validations:
+      required: true
+
+  - type: input
+    id: repo_url
+    attributes:
+      label: Repository URL
+      description: Public repo containing the module code
+      placeholder: https://github.com/you/elifelse-my-module
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What does it do?
+      description: A short description of the module
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contract
+    attributes:
+      label: Module contract self-review
+      description: Confirm each item honestly. Modules that break the contract can still be listed (with a note), but cannot be "approved".
+      options:
+        - label: LLM output is only displayed, stored, or passed to a constrained parser (enum, regex, game engine)
+          required: false
+        - label: LLM output never reaches a shell, eval, filesystem path, or outbound request
+          required: false
+        - label: No subprocess or os.system calls
+          required: false
+        - label: No dynamic imports based on LLM output
+          required: false
+
+  - type: dropdown
+    id: needs_keys
+    attributes:
+      label: Needs API keys or credentials?
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: posts_publicly
+    attributes:
+      label: Posts publicly (social media, email, etc.)?
+      options:
+        - "No"
+        - "Yes (read-only by default)"
+        - "Yes (writes by default)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Dependencies, known limitations, anything a reviewer should know
