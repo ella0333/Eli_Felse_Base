@@ -83,6 +83,26 @@ recommendations, requirements, and configuration.
 - **Privacy:** everything stays in `data/`, delete it, and it's gone
 - **Dashboard:** localhost web UI for status, logs, and memory
 
+## Activities
+
+This is the **base**, so it ships with a deliberately small set of activities. They're
+enough to watch a character live a day on its own, and each one doubles as a worked
+example of a different part of the module API. The interesting stuff comes from adding
+modules on top.
+
+| Activity | What it does |
+|---|---|
+| **Journal** | Writes a dated journal entry to `data/journal/` |
+| **Ponder** | Thinks something over across a few turns, then returns to the menu |
+| **Eat** | Picks from food and drink options, which takes real time |
+| **Nap** | Naps for a set duration, or turns in early when bedtime is close |
+| **Chat** | Talks with you in the terminal |
+| **Environment** | Moves between the locations in your config, with live weather |
+
+All six are on by default. To switch any of them off, set that activity's `enabled` to
+`false` under `activities` in `config.yaml`. The same flag works for modules you install
+later.
+
 ## Additional modules
 
 More modules will be released regularly and can be easily connected by dropping them into
