@@ -196,3 +196,21 @@ async def test_startup_registers_daycycle(dapp):
     await dapp.startup(discover=False)
     assert dapp.daycycle is not None
     assert dapp.daycycle.check_bedtime in dapp.scheduler.pre_menu_hooks
+
+
+async def test_daycycle_built_but_unhooked_when_disabled(dapp):
+    """Disabled means no bedtime, not no day cycle. Naps still need the object."""
+    dapp.config.day_cycle.enabled = False
+    await dapp.startup(discover=False)
+    assert dapp.daycycle is not None
+    assert dapp.daycycle.check_bedtime not in dapp.scheduler.pre_menu_hooks
+
+
+# ~~~ minutes_until_bedtime ~~~
+def test_minutes_until_bedtime(dapp, fake):
+    dc = DayCycle(dapp)  # 22:00 -> 08:00 defaults, clock at 12:00
+    assert dc.minutes_until_bedtime() == 10 * 60
+    fake.now_dt = datetime(2026, 7, 3, 21, 30)
+    assert dc.minutes_until_bedtime() == 30
+    fake.now_dt = datetime(2026, 7, 3, 23, 0)  # already in the sleep window
+    assert dc.minutes_until_bedtime() == 0

@@ -154,11 +154,16 @@ class App:
             self.environment = EnvironmentSystem(self.config.environment, weather, self.clock)
             self.scheduler.add_pre_menu_hook(self._environment_refresh)
 
-        if self.config.day_cycle.enabled and self.daycycle is None:
+        if self.daycycle is None:
             from elifelse.loop.daycycle import DayCycle
 
+            # The day cycle is always built: naps and budget sleep use its
+            # chunked, interruptible waits whether or not the agent keeps a
+            # schedule. Only the bedtime hook is behind the toggle, so an
+            # always-on agent can still nap but is never sent to bed.
             self.daycycle = DayCycle(self)
-            self.daycycle.register()
+            if self.config.day_cycle.enabled:
+                self.daycycle.register()
 
         if self.saves is None:
             from elifelse.state.saves import SaveSystem

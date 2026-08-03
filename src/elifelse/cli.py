@@ -85,11 +85,14 @@ def _load(args: argparse.Namespace) -> tuple[Config, Persona]:
         eat = config.activities.setdefault("eat", {})
         eat.setdefault("meal_minutes", 0)
         eat.setdefault("snack_minutes", 0)
+        # Naps stay in the menu (they don't need a schedule), but a demo nap
+        # returns instantly instead of blocking for a real twenty minutes.
+        config.activities.setdefault("nap", {}).setdefault("real_time", False)
         if config.day_cycle.enabled:
             # A mock demo started during the sleep window would answer the
             # bedtime menu and then REALLY sleep until morning.
             config.day_cycle.enabled = False
-            print_system("mock: day cycle disabled (a mock run would sleep for real hours)")
+            print_system("mock: bedtime disabled (a mock run would sleep for real hours)")
 
     persona_path = Path(args.persona)
     if persona_path.exists():

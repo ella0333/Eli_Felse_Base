@@ -51,6 +51,16 @@ class DayCycle:
             return bed <= t < wake
         return t >= bed or t < wake  # window crosses midnight (e.g. 22:00 -> 08:00)
 
+    def minutes_until_bedtime(self) -> int:
+        """Whole minutes until the next bedtime; 0 once inside the sleep window.
+
+        Used to keep nap durations from running past bedtime. Meaningless when
+        the day cycle is disabled, so callers check `config.enabled` first.
+        """
+        if self.in_sleep_window(self.app.clock()):
+            return 0
+        return int(self.seconds_until(self.config.bedtime) // 60)
+
     def seconds_until(self, hhmm: str) -> float:
         now = self.app.clock()
         h, m = _parse_hhmm(hhmm)

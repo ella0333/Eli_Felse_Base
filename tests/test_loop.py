@@ -44,7 +44,7 @@ async def test_scripted_loop_menu_activity_menu(app, mock_provider):
     assert "You just finished writing in your journal." in menu2
 
     # The menu schema's enum is exactly the visible letters (one per available
-    # activity — nap/environment are hidden because their subsystems are off).
+    # activity — environment is hidden because its subsystem is off).
     visible = [e["key"] for e in app.registry.menu_entries()]
     menu_schema = mock_provider.calls[0]["schema"]
     assert len(menu_schema["properties"]["choice"]["enum"]) == len(visible)
