@@ -110,12 +110,14 @@ More modules will be released regularly and can be easily connected by dropping 
   over Discord DMs and in server channels
 - **[Text RPG](https://github.com/ella0333/Eli_Felse_Text_RPG):** play Zork and other
   Z-machine text adventures
+- **[Web Search](https://github.com/ella0333/Eli_Felse_Web_Search):** ask a question and
+  get an answer, or browse search results and read a page
 
 Some examples of what's planned:
 
 - **Social:** Slack, Twitter, Reddit, Live streaming
 - **Games:** board games, Pokémon Blue
-- **Explore:** web search, news
+- **Explore:** news
 - **Creative:** blog, story writing, music
 - **Other:** reading
 
