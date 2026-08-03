@@ -83,6 +83,13 @@ class ActivityRegistry:
             activity = activity()
         name = activity.key or activity.__class__.__name__
 
+        if self._disabled(activity):
+            self.skipped.append((name, "disabled in config.yaml"))
+            print_system(
+                f"Activity '{name}' is off (activities.{activity.key}.enabled: false)"
+            )
+            return False
+
         reason = self._compat_reason(activity)
         if reason:
             self.skipped.append((name, reason))
@@ -96,6 +103,16 @@ class ActivityRegistry:
         if origin != "built-in":
             print_system(f"Loaded activity '{name}' ({origin})")
         return True
+
+    def _disabled(self, activity: Activity) -> bool:
+        """True when config.yaml turns this activity off.
+
+        Checked before compatibility, so switching a module off also silences
+        any complaint about the config keys it would otherwise require. Applies
+        to built-ins and drop-in modules alike; absent means enabled.
+        """
+        section = self.app.config.activities.get(activity.key, {})
+        return not section.get("enabled", True)
 
     def _compat_reason(self, activity: Activity) -> str | None:
         if not activity.key or not activity.menu_label:

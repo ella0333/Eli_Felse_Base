@@ -79,6 +79,60 @@ def test_required_config_key_satisfied(app):
     assert app.registry.register(NeedsKeyActivity)
 
 
+# ~~~ the activities.<key>.enabled switch ~~~
+def test_disabled_activity_not_registered(app):
+    app.config.activities["ping"] = {"enabled": False}
+    assert not app.registry.register(PingActivity)
+    assert "ping" not in app.registry.activities
+    assert app.registry.skipped[-1] == ("ping", "disabled in config.yaml")
+
+
+def test_enabled_true_and_absent_both_register(app):
+    app.config.activities["ping"] = {"enabled": True}
+    assert app.registry.register(PingActivity)
+    assert app.registry.register(HiddenActivity)  # no section at all
+
+
+def test_disabled_beats_missing_required_key(app):
+    """Switching a module off silences the config key it would have needed."""
+    app.config.activities["needskey"] = {"enabled": False}
+    assert not app.registry.register(NeedsKeyActivity)
+    _, reason = app.registry.skipped[-1]
+    assert reason == "disabled in config.yaml"
+
+
+def test_disabled_applies_to_dropins(app):
+    app.config.activities["greeter"] = {"enabled": False}
+    folder = app.paths.modules / "greeter"
+    folder.mkdir(parents=True)
+    (folder / "__init__.py").write_text(
+        textwrap.dedent(
+            """
+            from elifelse.activities.base import Activity
+
+            class GreeterActivity(Activity):
+                key = "greeter"
+                menu_label = "Say Hi"
+
+                async def run(self, ctx):
+                    return "hi"
+
+            ACTIVITIES = [GreeterActivity]
+            """
+        ),
+        encoding="utf-8",
+    )
+    app.registry.load_dropins(app.paths.modules)
+    assert "greeter" not in app.registry.activities
+
+
+def test_disabled_builtin_hidden_from_menu(app):
+    app.config.activities["nap"] = {"enabled": False}
+    app.registry.load_builtins()
+    assert "nap" not in app.registry.activities
+    assert "journal" in app.registry.activities
+
+
 def test_unavailable_activity_hidden_from_menu(app):
     app.registry.register(PingActivity)
     app.registry.register(HiddenActivity)

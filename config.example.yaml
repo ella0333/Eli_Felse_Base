@@ -51,10 +51,12 @@ model_params:
     chat_template_kwargs: null # e.g. {enable_thinking: false} for models that need it
 
 day_cycle:
-  enabled: true                # false = always-on, no sleep
+  enabled: true                # false = always-on, no bedtime (naps still work)
   bedtime: "22:00"
   wake_time: "08:00"
-  nap_durations: [20, 60, 120] # minutes offered in the nap menu
+  # Minutes offered in the nap menu. Durations that would run past bedtime are
+  # hidden automatically, and an early-night option is offered instead.
+  nap_durations: [20, 60, 120]
 
 memory:
   enabled: true
@@ -106,9 +108,31 @@ logging:
   level: "INFO"
 
 # Per-activity settings. Each activity reads its own section (see its docs).
+#
+# TURNING ACTIVITIES OFF: every activity has an `enabled` flag. Set it to false
+# and the activity is never registered, so it never appears in the menu and its
+# startup never runs. Leaving `enabled` out is the same as `enabled: true`.
+#
+# Active by default in this base: chat, eat, environment, journal, nap, ponder.
+#
+# The same flag works for drop-in modules from data/modules/, keyed by the
+# activity's own name, so you can install a module and switch it off later:
+#   discord:
+#     enabled: false
 activities:
   chat:
-    message_timeout: 180       # seconds to wait for a reply
-  eat: {}
-  journal: {}
-  ponder: {}
+    enabled: true
+    timeout_seconds: 180       # seconds to wait for a reply
+  eat:
+    enabled: true
+    meal_minutes: 10           # how long a meal takes, in real minutes
+    snack_minutes: 5
+  environment:
+    enabled: true              # needs environment.locations above
+  journal:
+    enabled: true
+  nap:
+    enabled: true              # needs day_cycle.nap_durations above
+    real_time: true            # false = naps return instantly (demos and testing)
+  ponder:
+    enabled: true

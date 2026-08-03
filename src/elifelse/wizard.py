@@ -543,6 +543,10 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
     _run_probe(config, config_path, base / ".env", io)
 
     io.say("")
+    io.say("Activities on by default: chat, eat, environment, journal, nap, ponder.")
+    io.say("Turn any of them off in config.yaml under 'activities' by setting")
+    io.say("that activity's 'enabled' to false. Same flag for modules you add later.")
+    io.say("")
     io.say("Done. Start the agent with:  elifelse run")
     if config.provider.kind == "mock":
         io.say("(mock demo: elifelse run --provider mock --max-iterations 3)")

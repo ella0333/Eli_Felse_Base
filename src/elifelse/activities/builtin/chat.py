@@ -43,8 +43,7 @@ class ChatActivity(Activity):
         return ctx.developer_name
 
     def available(self, ctx: ActivityContext) -> bool:
-        if not ctx.config.get("enabled", True):
-            return False
+        # `enabled: false` is handled by the registry, for every activity.
         return "terminal" in ctx.channels
 
     def get_status(self, ctx: ActivityContext) -> str:
