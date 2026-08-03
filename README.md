@@ -85,10 +85,8 @@ recommendations, requirements, and configuration.
 
 ## Activities
 
-This is the **base**, so it ships with a deliberately small set of activities. They're
-enough to watch a character live a day on its own, and each one doubles as a worked
-example of a different part of the module API. The interesting stuff comes from adding
-modules on top.
+This is the **base**. It comes with a small set of activities. They're
+enough to watch an LLM run autonomously on its own.
 
 | Activity | What it does |
 |---|---|
