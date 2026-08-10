@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class EnvironmentActivity(Activity):
     key = "environment"
-    menu_label = "Go somewhere else"
+    menu_label = "Change the environment"
     requires_base = ">=0.2,<1"
     survey = "simple"
 

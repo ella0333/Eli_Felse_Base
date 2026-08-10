@@ -38,6 +38,9 @@ def test_local_lmstudio_defaults(tmp_path):
         "y",          # day cycle
         "11:00 PM",   # bedtime (12h format)
         "",           # wake default (shows as 8:00 AM)
+        "",           # environment: set up somewhere to live -> yes
+        "",           # starting place -> hillside cabin
+        "",           # real weather -> yes
         "Nova",       # persona name
         "",           # pronouns default
         "",           # personality default
@@ -58,6 +61,12 @@ def test_local_lmstudio_defaults(tmp_path):
     assert config.day_cycle.enabled and config.day_cycle.bedtime == "23:00"
     assert config.day_cycle.wake_time == "08:00"
 
+    # Somewhere to live, or 'Change the environment' hides itself and the
+    # summary at the end of setup would be claiming an activity that is off.
+    assert len(config.environment.locations) == 3
+    assert config.environment.current == "hillside_cabin"
+    assert config.environment.weather is True
+
     persona = load_persona(tmp_path / "persona.yaml")
     assert persona.name == "Nova"
     assert persona.creator.name == "Ella"
@@ -77,6 +86,7 @@ def test_paid_api_requires_explicit_spend_cap(tmp_path):
         "150000",
         "2",           # pacing instant
         "n",           # day cycle off
+        "n",           # no environment locations
         "Nova", "", "", "",
         "sk-test-key-123",  # actual API key
     ]
@@ -99,6 +109,7 @@ def test_paid_api_unlimited_needs_confirmation(tmp_path):
         "UNLIMITED", "y",        # confirmed unlimited
         "3", "0", "5",           # custom pacing 0..5
         "n",                     # day cycle off
+        "n",                     # no environment locations
         "Nova", "", "", "",
         "sk-test-456",           # actual API key
     ]
@@ -123,6 +134,7 @@ def test_keeps_existing_persona(tmp_path):
         "4",       # mock provider (skips all provider questions)
         "y",       # day cycle
         "", "",    # bedtime/wake defaults
+        "", "", "",  # environment: yes, first place, weather on
         "",        # keep existing persona -> default yes
     ]
     rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
@@ -139,6 +151,7 @@ def test_env_stub_appends_without_clobbering(tmp_path):
         "1000",
         "2",          # instant
         "n",          # day cycle off
+        "n",          # no environment locations
         "Nova", "", "", "",
         "sk-test-789",  # actual API key
     ]
@@ -147,3 +160,41 @@ def test_env_stub_appends_without_clobbering(tmp_path):
     env_text = (tmp_path / ".env").read_text(encoding="utf-8")
     assert env_text.startswith("OTHER=1\n")
     assert "ELIFELSE_API_KEY=sk-test-789" in env_text
+
+
+def test_declining_the_environment_leaves_it_off(tmp_path):
+    """Saying no writes no locations, which is what hides the activity."""
+    answers = [
+        "",        # owner
+        "4",       # mock provider
+        "n",       # day cycle off
+        "n",       # no environment locations
+        "Nova", "", "", "",
+    ]
+    rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
+    assert rc == 0
+
+    config = load_config(tmp_path / "config.yaml")
+    assert config.environment.locations == []
+    assert config.environment.enabled is False
+
+
+def test_the_starting_place_can_be_chosen(tmp_path):
+    answers = [
+        "",        # owner
+        "4",       # mock provider
+        "n",       # day cycle off
+        "y",       # set up somewhere to live
+        "3",       # seaside cottage
+        "n",       # no live weather
+        "Nova", "", "", "",
+    ]
+    rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
+    assert rc == 0
+
+    config = load_config(tmp_path / "config.yaml")
+    assert config.environment.current == "seaside_cottage"
+    assert config.environment.weather is False
+    assert [loc.key for loc in config.environment.locations] == [
+        "hillside_cabin", "city_loft", "seaside_cottage",
+    ]

@@ -23,7 +23,12 @@ from typing import Any
 import httpx
 import yaml
 
-from elifelse.config import Config, ProviderConfig
+from elifelse.config import (
+    Config,
+    EnvironmentConfig,
+    EnvironmentLocation,
+    ProviderConfig,
+)
 from elifelse.persona import Persona
 from elifelse.textutils import print_system
 
@@ -385,6 +390,71 @@ async def _probe_api(config: Config) -> dict[str, Any]:
     return result
 
 
+# The set config.example.yaml ships. Three places, far enough apart that the
+# weather is visibly different in each, which is the point of the feature.
+_DEFAULT_LOCATIONS = [
+    EnvironmentLocation(
+        key="hillside_cabin",
+        name="Hillside Cabin",
+        description=(
+            "A small wooden cabin on a quiet hillside, with a desk by the window."
+        ),
+        latitude=44.05,
+        longitude=-71.68,
+    ),
+    EnvironmentLocation(
+        key="city_loft",
+        name="City Loft",
+        description="A bright loft apartment above a busy street, plants on the sill.",
+        latitude=40.71,
+        longitude=-74.01,
+    ),
+    EnvironmentLocation(
+        key="seaside_cottage",
+        name="Seaside Cottage",
+        description="A weathered cottage near the shore; you can hear gulls outside.",
+        latitude=43.66,
+        longitude=-70.25,
+    ),
+]
+
+
+def _ask_environment(io: WizardIO) -> EnvironmentConfig:
+    """Somewhere for the agent to be.
+
+    Worth asking rather than defaulting silently: the activity hides itself
+    when there is nowhere to go, so a config written without locations quietly
+    has one fewer activity than the summary at the end of setup claims.
+    """
+    env = EnvironmentConfig()
+
+    io.say("")
+    io.say("The agent lives somewhere, and can move between places. Where it is")
+    io.say("colors what it writes and how it feels, and each place has its own")
+    io.say("real weather, pulled from a free service that needs no key.")
+    io.say("")
+    io.say("The three suggested places are a hillside cabin, a city loft and a")
+    io.say("seaside cottage.")
+
+    if not io.yesno("Set up somewhere for the agent to live?", default=True):
+        env.enabled = False
+        io.say("no places set, so 'Change the environment' stays off the menu")
+        io.say("add environment.locations to config.yaml later to switch it on")
+        return env
+
+    env.locations = list(_DEFAULT_LOCATIONS)
+    env.current = io.choice(
+        "Which one does it start in?",
+        [(loc.key, loc.name) for loc in _DEFAULT_LOCATIONS],
+        default=_DEFAULT_LOCATIONS[0].key,
+    )
+    io.say("")
+    io.say("Weather is looked up per place from Open-Meteo. No key, no account.")
+    env.weather = io.yesno("Use real weather?", default=True)
+    io.say("edit environment.locations in config.yaml to use places of your own")
+    return env
+
+
 def _run_probe(config: Config, config_path: Path, env_path: Path, io: WizardIO) -> None:
     """Run the API probe and report / apply fixes."""
     if config.provider.kind == "mock":
@@ -507,6 +577,8 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
         config.day_cycle.bedtime = io.hhmm("Bedtime", default="22:00")
         config.day_cycle.wake_time = io.hhmm("Wake time", default="08:00")
 
+    config.environment = _ask_environment(io)
+
     persona: Persona | None = None
     if persona_path.exists():
         if io.yesno(f"{persona_path} already exists. Keep it?", default=True):
@@ -543,7 +615,16 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
     _run_probe(config, config_path, base / ".env", io)
 
     io.say("")
-    io.say("Activities on by default: chat, eat, environment, journal, nap, ponder.")
+    active = ["chat", "eat", "journal", "ponder"]
+    if config.environment.locations:
+        active.insert(2, "environment")
+    if config.day_cycle.enabled:
+        active.insert(3, "nap")
+    io.say(f"Activities on: {', '.join(active)}.")
+    if not config.environment.locations:
+        io.say("environment is off until you give it somewhere to be.")
+    if not config.day_cycle.enabled:
+        io.say("nap is off until the day cycle is on.")
     io.say("Turn any of them off in config.yaml under 'activities' by setting")
     io.say("that activity's 'enabled' to false. Same flag for modules you add later.")
     io.say("")
