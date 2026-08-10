@@ -36,9 +36,9 @@ def test_local_lmstudio_defaults(tmp_path):
         "",           # daily budget default 0 (local)
         "",           # pacing -> lifelike
         "y",          # let it sleep
-        "n",          # don't let it pick its bedtime -> ask for one
+        "y",          # give it a set bedtime
         "11:00 PM",   # bedtime (12h format)
-        "n",          # don't let it pick its wake time -> ask for one
+        "y",          # give it a set wake time
         "",           # wake default (shows as 8:00 AM)
         "",           # real weather -> yes
         "Nova",       # persona name
@@ -129,8 +129,8 @@ def test_sleeping_with_no_bedtime_is_the_default_path(tmp_path):
         "",        # owner
         "4",       # mock provider
         "",        # let it sleep -> default yes
-        "",        # let it pick its bedtime -> default yes
-        "",        # let it pick its wake time -> default yes
+        "",        # set bedtime? -> default no, it picks
+        "",        # set wake time? -> default no, it picks
         "n",       # no live weather
         "Nova", "", "", "",
     ]
@@ -174,8 +174,8 @@ def test_keeps_existing_persona(tmp_path):
         "",        # owner
         "4",       # mock provider (skips all provider questions)
         "y",       # let it sleep
-        "",        # let it pick its bedtime -> default yes
-        "",        # let it pick its wake time -> default yes
+        "",        # set bedtime? -> default no, it picks
+        "",        # set wake time? -> default no, it picks
         "",        # real weather -> yes
         "",        # keep existing persona -> default yes
     ]

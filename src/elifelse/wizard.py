@@ -390,42 +390,36 @@ async def _probe_api(config: Config) -> dict[str, Any]:
 
 
 def _ask_sleep(io: WizardIO, config: Config) -> None:
-    """Whether the agent sleeps, and who decides when.
+    """Whether the agent sleeps, and whether you set its hours or it does.
 
-    Three yes/no questions with the same shape, and the last two are skipped
-    when the answer to the first is no, so an always-on agent is not walked
-    through a schedule it will never keep. Both default to letting the agent
-    decide, because a time it was told is a time it counts down to.
+    Three yes/no questions, and the last two are skipped when the answer to
+    the first is no, so an always-on agent is not walked through a schedule it
+    will never keep. Both default to no, meaning the agent decides, because a
+    time it was told is a time it counts down to.
     """
     dc = config.day_cycle
 
     io.say("")
-    io.say("Sleeping: the agent goes to bed and sleeps for real, making no API")
-    io.say("calls until it wakes. Recommended for paid APIs too.")
+    io.say("The agent can sleep. It goes to bed and really sleeps, making no API")
+    io.say("calls until it wakes.")
     dc.enabled = io.yesno("Let the agent sleep?", default=True)
     if not dc.enabled:
-        io.say("no nights, so it runs straight through. Naps still work.")
+        io.say("it runs straight through instead. Naps still work.")
         return
 
     io.say("")
-    io.say("If it picks, 'Take a nap' turns into 'Go to bed' at 9:00 PM and it")
-    io.say("goes when it wants. A bedtime you set gives it something to count")
-    io.say("down to, so it starts winding down hours early.")
-    if io.yesno("Let the agent pick its own bedtime?", default=True):
-        io.say("change that 9:00 PM with day_cycle.night_start in config.yaml")
-    else:
+    if io.yesno("Would you like to give it a set bedtime?", default=False):
         dc.bedtime = io.hhmm("Bedtime", default="22:00")
+    else:
+        io.say("it will choose on its own. At 9:00 PM 'Take a nap' becomes 'Go to bed'.")
 
     io.say("")
-    io.say("Same question for the morning: it can set an alarm each night on its")
-    io.say("way to bed, or wake at the same time every day.")
-    if io.yesno("Let the agent pick its own wake time?", default=True):
-        dc.wake_mode = "alarm"
-        io.say("it picks between 4 AM and 11 AM; change that with")
-        io.say("day_cycle.alarm_hours in config.yaml")
-    else:
+    if io.yesno("Would you like to give it a set wake time?", default=False):
         dc.wake_mode = "fixed"
         dc.wake_time = io.hhmm("Wake time", default="08:00")
+    else:
+        dc.wake_mode = "alarm"
+        io.say("it will choose on its own, setting an alarm each night before bed.")
 
 
 def _ask_environment(io: WizardIO) -> EnvironmentConfig:
@@ -440,13 +434,9 @@ def _ask_environment(io: WizardIO) -> EnvironmentConfig:
     env = EnvironmentConfig()
 
     io.say("")
-    io.say("The agent exists in an environment, and picks which one on its first")
-    io.say("run: a hillside cabin, a city loft or a seaside cottage. It can change")
-    io.say("later. The environment goes into its prompt as background, coloring")
-    io.say("its mood and writing without it narrating the scenery.")
-    io.say("")
-    io.say("Each environment can carry its own real weather, from Open-Meteo.")
-    io.say("No key, no account.")
+    io.say("The agent picks its own environment on its first run: a hillside")
+    io.say("cabin, a city loft or a seaside cottage. It can change later.")
+    io.say("Each one can carry its real weather, from Open-Meteo. No key needed.")
     env.weather = io.yesno("Use real weather?", default=True)
     io.say("edit environment.locations in config.yaml to use places of your own")
     return env
