@@ -104,11 +104,20 @@ def build_base_prompt(app: App) -> str:
 
     # ~~~ date / schedule ~~~
     blocks.append(f"Today is {now.strftime('%A, %B %d, %Y')}.")
+    # Only facts that are actually fixed go in here. A schedule in the system
+    # prompt sits in front of the agent on every single generation, so a
+    # bedtime it can see coming is a bedtime it spends the evening counting
+    # down to, winding down hours early instead of doing anything else. With
+    # the defaults there is no bedtime and it picks its own wake hour, so
+    # nothing is asserted at all and the only night cue is the menu.
     dc = app.config.day_cycle
     if dc.enabled:
-        blocks.append(
-            f"Your daily schedule: you wake up around {format_time_12h(dc.wake_time)} "
-            f"and go to bed around {format_time_12h(dc.bedtime)}."
-        )
+        parts = []
+        if dc.wake_mode == "fixed":
+            parts.append(f"you wake up around {format_time_12h(dc.wake_time)}")
+        if dc.bedtime:
+            parts.append(f"you go to bed around {format_time_12h(dc.bedtime)}")
+        if parts:
+            blocks.append(f"Your daily schedule: {' and '.join(parts)}.")
 
     return "\n\n".join(blocks)

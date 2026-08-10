@@ -158,12 +158,11 @@ class App:
             from elifelse.loop.daycycle import DayCycle
 
             # The day cycle is always built: naps and budget sleep use its
-            # chunked, interruptible waits whether or not the agent keeps a
-            # schedule. Only the bedtime hook is behind the toggle, so an
-            # always-on agent can still nap but is never sent to bed.
+            # chunked, interruptible waits whether or not the agent sleeps at
+            # all. register() decides for itself whether anything gets wired
+            # into the loop, which only a scheduled bedtime needs.
             self.daycycle = DayCycle(self)
-            if self.config.day_cycle.enabled:
-                self.daycycle.register()
+            self.daycycle.register()
 
         if self.saves is None:
             from elifelse.state.saves import SaveSystem

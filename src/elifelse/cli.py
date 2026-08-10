@@ -89,10 +89,10 @@ def _load(args: argparse.Namespace) -> tuple[Config, Persona]:
         # returns instantly instead of blocking for a real twenty minutes.
         config.activities.setdefault("nap", {}).setdefault("real_time", False)
         if config.day_cycle.enabled:
-            # A mock demo started during the sleep window would answer the
-            # bedtime menu and then REALLY sleep until morning.
+            # A mock demo started in the evening would pick "Go to bed" (or
+            # answer the bedtime menu) and then REALLY sleep until morning.
             config.day_cycle.enabled = False
-            print_system("mock: bedtime disabled (a mock run would sleep for real hours)")
+            print_system("mock: sleeping disabled (a mock run would sleep for real hours)")
 
     persona_path = Path(args.persona)
     if persona_path.exists():

@@ -75,21 +75,58 @@ class ProviderConfig(BaseModel):
         return val
 
 
+def _check_hhmm(v: str) -> str:
+    parts = v.split(":")
+    if len(parts) != 2 or not all(p.isdigit() for p in parts):
+        raise ValueError("must be 'HH:MM' (24h)")
+    h, m = int(parts[0]), int(parts[1])
+    if not (0 <= h < 24 and 0 <= m < 60):
+        raise ValueError("must be a valid 24h time 'HH:MM'")
+    return v
+
+
 class DayCycleConfig(BaseModel):
+    """When and whether the agent sleeps.
+
+    `enabled` is the master switch: off means it never sleeps for the night,
+    only naps. `bedtime` is separate and optional, because a scheduled bedtime
+    is something the agent counts down to. Left empty (the default) there is
+    nothing to anticipate: from `night_start` the nap activity reads "Go to
+    bed" instead, and it turns in when it decides to.
+    """
+
     enabled: bool = True
-    bedtime: str = "22:00"
-    wake_time: str = "08:00"
+    bedtime: str = ""                # "" = no scheduled bedtime
+    night_start: str = "21:00"       # from here "Take a nap" reads "Go to bed"
+    wake_mode: str = "alarm"         # "alarm" = it picks; "fixed" = wake_time
+    wake_time: str = "08:00"         # fixed mode, and the fallback if the ask fails
+    alarm_hours: list[int] = Field(default_factory=lambda: list(range(4, 12)))
     nap_durations: list[int] = Field(default_factory=lambda: [20, 60, 120])
 
-    @field_validator("bedtime", "wake_time")
+    @field_validator("night_start", "wake_time")
     @classmethod
     def _hhmm(cls, v: str) -> str:
-        parts = v.split(":")
-        if len(parts) != 2 or not all(p.isdigit() for p in parts):
-            raise ValueError("must be 'HH:MM' (24h)")
-        h, m = int(parts[0]), int(parts[1])
-        if not (0 <= h < 24 and 0 <= m < 60):
-            raise ValueError("must be a valid 24h time 'HH:MM'")
+        return _check_hhmm(v)
+
+    @field_validator("bedtime")
+    @classmethod
+    def _optional_hhmm(cls, v: str) -> str:
+        return v if v == "" else _check_hhmm(v)
+
+    @field_validator("wake_mode")
+    @classmethod
+    def _wake_mode(cls, v: str) -> str:
+        if v not in ("alarm", "fixed"):
+            raise ValueError("must be 'alarm' or 'fixed'")
+        return v
+
+    @field_validator("alarm_hours")
+    @classmethod
+    def _alarm_hours(cls, v: list[int]) -> list[int]:
+        if not v:
+            raise ValueError("must list at least one hour for the alarm menu")
+        if any(not (0 <= h < 24) for h in v):
+            raise ValueError("must be hours 0-23")
         return v
 
 

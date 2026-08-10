@@ -101,8 +101,9 @@ The wizard walks you through everything:
   feel more natural. "Instant" removes the delay. You can also set custom min/max values.
 - **Spend cap:** for paid APIs, a daily token budget (mandatory). For local models,
   optional.
-- **Day cycle:** bedtime and wake time (the agent sleeps on schedule, making zero API
-  calls overnight)
+- **Sleeping:** whether the agent sleeps at all (it makes zero API calls overnight),
+  whether it keeps a fixed bedtime, and whether it picks its own wake time each night
+  or always wakes at the same hour. Saying no to sleeping skips the rest.
 - **Character:** name, pronouns, personality, backstory for your AI persona
 
 When it's done, it writes `config.yaml` and `persona.yaml`, then runs a quick connection

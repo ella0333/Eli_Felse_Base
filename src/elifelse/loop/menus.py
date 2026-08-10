@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import string
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from elifelse.textutils import format_time_12h
@@ -97,6 +97,44 @@ def build_main_menu(
     lines.append("")
     lines.append(f"Current Time: {now.strftime('%I:%M %p')}")
     return Menu(text="\n".join(lines), letters=letters, mapping=mapping)
+
+
+def _sleep_length(minutes: int) -> str:
+    """Whole hours only. The trailing minutes were noise on a menu whose only
+    job is "roughly how long will I be out", and truncating rather than
+    rounding never promises more sleep than the option actually gives."""
+    hours = max(0, minutes) // 60
+    return f"{hours} hour{'s' if hours != 1 else ''} of sleep"
+
+
+def build_alarm_menu(now: datetime, alarm_hours: list[int]) -> tuple[Menu, list[int]]:
+    """The wake-hour picker, one entry per hour in `alarm_hours`.
+
+    Returns the menu and the hours in menu order, so the caller maps the chosen
+    option straight to an hour instead of rebuilding the same list and risking
+    the two drifting apart. Every hour is always offered: there is no cap on
+    how far out an alarm can be set, and an agent that wants to sleep for
+    seventeen hours is allowed to.
+    """
+    options: list[str] = []
+    labels: list[str] = []
+    hours: list[int] = []
+    for index, hour in enumerate(alarm_hours):
+        alarm_at = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+        if alarm_at <= now:
+            alarm_at += timedelta(days=1)
+        minutes = int((alarm_at - now).total_seconds() / 60)
+        options.append(str(index))
+        labels.append(f"{format_time_12h(f'{hour:02d}:00')} ({_sleep_length(minutes)})")
+        hours.append(hour)
+
+    menu = build_choice_menu(
+        "You're settling in for the night. What time do you want to wake up?",
+        options=options,
+        labels=labels,
+        footer=f"Current Time: {now.strftime('%I:%M %p')}",
+    )
+    return menu, hours
 
 
 def build_bedtime_menu(bedtime: str) -> Menu:

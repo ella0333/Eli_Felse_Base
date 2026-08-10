@@ -35,8 +35,10 @@ def test_local_lmstudio_defaults(tmp_path):
         "n",          # lms auto-load
         "",           # daily budget default 0 (local)
         "",           # pacing -> lifelike
-        "y",          # day cycle
+        "y",          # let it sleep
+        "y",          # set a fixed bedtime
         "11:00 PM",   # bedtime (12h format)
+        "2",          # wake mode -> the same time every day
         "",           # wake default (shows as 8:00 AM)
         "",           # environment: set up somewhere to live -> yes
         "",           # starting place -> hillside cabin
@@ -59,6 +61,7 @@ def test_local_lmstudio_defaults(tmp_path):
     assert config.provider.api_key_env == ""
     assert (config.provider.response_delay_min, config.provider.response_delay_max) == (1, 40)
     assert config.day_cycle.enabled and config.day_cycle.bedtime == "23:00"
+    assert config.day_cycle.wake_mode == "fixed"
     assert config.day_cycle.wake_time == "08:00"
 
     # Somewhere to live, or 'Change the environment' hides itself and the
@@ -120,6 +123,44 @@ def test_paid_api_unlimited_needs_confirmation(tmp_path):
     assert (config.provider.response_delay_min, config.provider.response_delay_max) == (0, 5)
 
 
+def test_sleeping_with_no_bedtime_is_the_default_path(tmp_path):
+    """Enter through all three sleep questions: sleep yes, bedtime no, alarm."""
+    answers = [
+        "",        # owner
+        "4",       # mock provider
+        "",        # let it sleep -> default yes
+        "",        # fixed bedtime -> default no
+        "",        # wake mode -> default alarm
+        "n",       # no environment locations
+        "Nova", "", "", "",
+    ]
+    rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
+    assert rc == 0
+
+    config = load_config(tmp_path / "config.yaml")
+    assert config.day_cycle.enabled is True
+    assert config.day_cycle.bedtime == ""       # nothing to count down to
+    assert config.day_cycle.wake_mode == "alarm"
+    assert config.day_cycle.night_start == "21:00"
+
+
+def test_no_sleeping_skips_the_rest_of_the_block(tmp_path):
+    """One question instead of three. An overrun here means one was still asked."""
+    answers = [
+        "",        # owner
+        "4",       # mock provider
+        "n",       # no sleeping
+        "n",       # no environment locations
+        "Nova", "", "", "",
+    ]
+    rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
+    assert rc == 0
+
+    config = load_config(tmp_path / "config.yaml")
+    assert config.day_cycle.enabled is False
+    assert config.day_cycle.bedtime == ""
+
+
 def test_refuses_overwrite_by_default(tmp_path):
     (tmp_path / "config.yaml").write_text("developer_name: Keep\n", encoding="utf-8")
     rc = run_wizard(tmp_path, ask=scripted(["", ""]), say=quiet)  # overwrite? -> default no
@@ -132,8 +173,9 @@ def test_keeps_existing_persona(tmp_path):
     answers = [
         "",        # owner
         "4",       # mock provider (skips all provider questions)
-        "y",       # day cycle
-        "", "",    # bedtime/wake defaults
+        "y",       # let it sleep
+        "",        # fixed bedtime -> default no
+        "",        # wake mode -> default alarm
         "", "", "",  # environment: yes, first place, weather on
         "",        # keep existing persona -> default yes
     ]
@@ -150,7 +192,7 @@ def test_env_stub_appends_without_clobbering(tmp_path):
         "", "3", "", "m", "",
         "1000",
         "2",          # instant
-        "n",          # day cycle off
+        "n",          # no sleeping (skips bedtime and wake)
         "n",          # no environment locations
         "Nova", "", "", "",
         "sk-test-789",  # actual API key
@@ -167,7 +209,7 @@ def test_declining_the_environment_leaves_it_off(tmp_path):
     answers = [
         "",        # owner
         "4",       # mock provider
-        "n",       # day cycle off
+        "n",       # no sleeping (skips bedtime and wake)
         "n",       # no environment locations
         "Nova", "", "", "",
     ]
@@ -183,7 +225,7 @@ def test_the_starting_place_can_be_chosen(tmp_path):
     answers = [
         "",        # owner
         "4",       # mock provider
-        "n",       # day cycle off
+        "n",       # no sleeping (skips bedtime and wake)
         "y",       # set up somewhere to live
         "3",       # seaside cottage
         "n",       # no live weather

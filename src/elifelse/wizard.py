@@ -419,6 +419,50 @@ _DEFAULT_LOCATIONS = [
 ]
 
 
+def _ask_sleep(io: WizardIO, config: Config) -> None:
+    """Whether the agent sleeps, and on whose terms.
+
+    Three questions that collapse into one when the answer to the first is no,
+    so an always-on agent is not walked through a schedule it will never keep.
+    The bedtime question is asked separately from sleeping itself, and defaults
+    to no, because a fixed bedtime turns out to be the expensive option: it is
+    in front of the agent all evening and it plays out the wind-down for hours
+    before the hour arrives.
+    """
+    dc = config.day_cycle
+
+    io.say("")
+    io.say("Sleeping: the agent goes to bed and sleeps for real, making no API")
+    io.say("calls until it wakes. Recommended for paid APIs too.")
+    dc.enabled = io.yesno("Let the agent sleep?", default=True)
+    if not dc.enabled:
+        io.say("no nights, so it runs straight through. Naps still work.")
+        return
+
+    io.say("")
+    io.say("A fixed bedtime gives it something to count down to, and it starts")
+    io.say("winding down hours early instead of doing anything else. Without one,")
+    io.say("'Take a nap' becomes 'Go to bed' at 9:00 PM and it turns in when it's")
+    io.say("ready. Change that hour with day_cycle.night_start in config.yaml.")
+    if io.yesno("Set a fixed bedtime anyway?", default=False):
+        dc.bedtime = io.hhmm("Bedtime", default="22:00")
+
+    io.say("")
+    io.say("It can pick its own wake time each night, off a menu of hours, or you")
+    io.say("can hold it to the same hour every day.")
+    dc.wake_mode = io.choice(
+        "How does it wake up?",
+        [("alarm", "It sets its own alarm each night"),
+         ("fixed", "The same time every day")],
+        default="alarm",
+    )
+    if dc.wake_mode == "fixed":
+        dc.wake_time = io.hhmm("Wake time", default="08:00")
+    else:
+        io.say("edit day_cycle.alarm_hours in config.yaml to change which hours")
+        io.say("it can choose from (4 AM to 11 AM by default)")
+
+
 def _ask_environment(io: WizardIO) -> EnvironmentConfig:
     """Somewhere for the agent to be.
 
@@ -569,13 +613,7 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
     )
     config.provider = _ask_provider(io)
 
-    io.say("")
-    io.say("Day cycle: the agent keeps human hours — it goes to bed, sleeps (no API")
-    io.say("calls at all), and wakes up on schedule. Recommended for paid APIs too.")
-    config.day_cycle.enabled = io.yesno("Enable the day cycle?", default=True)
-    if config.day_cycle.enabled:
-        config.day_cycle.bedtime = io.hhmm("Bedtime", default="22:00")
-        config.day_cycle.wake_time = io.hhmm("Wake time", default="08:00")
+    _ask_sleep(io, config)
 
     config.environment = _ask_environment(io)
 
@@ -616,8 +654,9 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
 
     io.say("")
     # Environment is the only built-in that gates on something asked here.
-    # Nap looks like it should too, but the day cycle is always built and only
-    # its bedtime hook is behind the toggle, so naps work either way.
+    # Nap looks like it should too, but the day cycle is always built, so an
+    # agent that never sleeps for the night can still nap. All the sleep
+    # answers change is what that one menu entry offers.
     active = ["chat", "eat", "journal", "nap", "ponder"]
     if config.environment.locations:
         active.append("environment")

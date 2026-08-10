@@ -160,8 +160,8 @@ async def _nap_app(config, persona, at: datetime):
     return app, provider, fake
 
 
-async def test_nap_available_without_day_cycle(app):
-    """An always-on agent has no bedtime, but it can still nap."""
+async def test_nap_available_when_it_never_sleeps(app):
+    """An always-on agent has no night, but it can still nap."""
     await app.startup(discover=False)  # test config: day cycle disabled
     app.registry.register(NapActivity)
     activity = app.registry.get("nap")
@@ -171,8 +171,8 @@ async def test_nap_available_without_day_cycle(app):
     assert app.daycycle.check_bedtime not in app.scheduler.pre_menu_hooks
 
 
-async def test_nap_without_day_cycle_offers_no_early_night(app, mock_provider):
-    """No schedule means no bedtime to collide with: all durations, no early night."""
+async def test_nap_without_sleeping_offers_no_early_night(app, mock_provider):
+    """Never sleeping means no night to collide with: all durations, no early night."""
     await app.startup(discover=False)
     app.registry.register(NapActivity)
     activity = app.registry.get("nap")
@@ -187,6 +187,8 @@ async def test_nap_without_day_cycle_offers_no_early_night(app, mock_provider):
 
 async def test_nap_picks_duration_and_delegates(config, persona):
     config.day_cycle.enabled = True
+    config.day_cycle.bedtime = "22:00"
+    config.day_cycle.wake_mode = "fixed"
     app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 14, 0))
     activity = app.registry.get("nap")
     provider.feed({"thinking": "sleepy", "choice": "A"})  # 20 minutes
@@ -202,12 +204,15 @@ async def test_nap_picks_duration_and_delegates(config, persona):
     assert "A) 20 minutes" in menu_text
     assert "B) 1 hour" in menu_text
     assert "C) 2 hours" in menu_text
-    assert "D) Go to bed early (sleep until 8:00 AM)" in menu_text
+    assert "D) Go to bed for the night (sleep until 8:00 AM)" in menu_text
 
 
 async def test_nap_durations_past_bedtime_are_hidden(config, persona):
     """At 21:00 with a 22:00 bedtime, only the 20-minute nap still fits."""
     config.day_cycle.enabled = True
+    config.day_cycle.bedtime = "22:00"
+    config.day_cycle.wake_mode = "fixed"
+    config.day_cycle.night_start = "23:00"  # keep the bedtime the nearer edge
     app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 21, 0))
     activity = app.registry.get("nap")
     provider.feed({"thinking": "sleepy", "choice": "A"})
@@ -216,13 +221,16 @@ async def test_nap_durations_past_bedtime_are_hidden(config, persona):
     assert provider.calls[0]["schema"]["properties"]["choice"]["enum"] == ["A", "B"]
     menu_text = str(provider.calls[0]["messages"])
     assert "A) 20 minutes" in menu_text
-    assert "B) Go to bed early" in menu_text
+    assert "B) Go to bed for the night" in menu_text
     assert "1 hour" not in menu_text
     assert "close to your 10:00 PM bedtime" in menu_text  # the shorter menu is explained
 
 
 async def test_nap_early_night_sleeps_until_morning(config, persona):
     config.day_cycle.enabled = True
+    config.day_cycle.bedtime = "22:00"
+    config.day_cycle.wake_mode = "fixed"
+    config.day_cycle.night_start = "23:00"  # still evening, so it is a choice
     app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 21, 0))
     activity = app.registry.get("nap")
     provider.feed({"thinking": "worn out", "choice": "B"})  # go to bed early
@@ -232,8 +240,52 @@ async def test_nap_early_night_sleeps_until_morning(config, persona):
     assert sum(fake.sleeps) == 11 * 3600  # 21:00 -> 08:00, straight through
 
 
+async def test_nap_reads_go_to_bed_after_night_start(config, persona):
+    """The whole replacement for a bedtime: one menu entry changing what it says."""
+    config.day_cycle.enabled = True  # default: no bedtime, alarm wake
+    app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 21, 30))
+    activity = app.registry.get("nap")
+    ctx = app.registry.ctx_for(activity)
+    assert activity.get_menu_label(ctx) == "Go to bed"
+
+    fake.now_dt = datetime(2026, 7, 3, 14, 0)
+    assert activity.get_menu_label(ctx) == "Take a nap"
+
+
+async def test_go_to_bed_skips_the_duration_menu(config, persona):
+    """It read "Go to bed", so it goes to bed. There is nothing to pick between."""
+    config.day_cycle.enabled = True
+    app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 21, 30))
+    activity = app.registry.get("nap")
+    provider.feed({"thinking": "long night", "choice": "A"})  # the alarm menu, 4 AM
+
+    note = await activity.run(app.registry.ctx_for(activity))
+    assert "brand new day" in note
+    assert sum(fake.sleeps) == 6.5 * 3600  # 21:30 -> 04:00
+    # One ask, and it was the alarm, not a nap duration.
+    assert len(provider.calls) == 1
+    assert "how long do you want to nap" not in str(provider.calls[0]["messages"]).lower()
+
+
+async def test_nap_durations_that_run_into_the_night_are_hidden(config, persona):
+    """With no bedtime, night_start is the edge a nap must not cross."""
+    config.day_cycle.enabled = True  # night_start 21:00
+    app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 20, 30))
+    activity = app.registry.get("nap")
+    provider.feed({"thinking": "sleepy", "choice": "A"})
+
+    await activity.run(app.registry.ctx_for(activity))
+    menu_text = str(provider.calls[0]["messages"])
+    assert "A) 20 minutes" in menu_text
+    assert "1 hour" not in menu_text
+    assert "the night starts at 9:00 PM" in menu_text
+    # No wake hour promised: it picks one on the way to bed.
+    assert "B) Go to bed for the night" in menu_text
+    assert "sleep until" not in menu_text
+
+
 async def test_nap_hidden_when_no_durations_are_offered(config, persona):
-    """No schedule and no durations configured leaves nothing to choose."""
+    """No sleeping and no durations configured leaves nothing to choose."""
     config.day_cycle.enabled = False
     config.day_cycle.nap_durations = []
     app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 14, 0))

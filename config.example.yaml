@@ -51,11 +51,21 @@ model_params:
     chat_template_kwargs: null # e.g. {enable_thinking: false} for models that need it
 
 day_cycle:
-  enabled: true                # false = always-on, no bedtime (naps still work)
-  bedtime: "22:00"
-  wake_time: "08:00"
-  # Minutes offered in the nap menu. Durations that would run past bedtime are
-  # hidden automatically, and an early-night option is offered instead.
+  enabled: true                # false = always-on, never sleeps (naps still work)
+  # A scheduled bedtime is optional and off by default. Set one and the agent
+  # is told about it and asked to bed when the hour comes, which also means it
+  # spends the evening counting down to it. Left empty there is nothing to
+  # anticipate: from night_start the nap menu entry reads "Go to bed" instead,
+  # and the agent turns in when it decides to.
+  bedtime: ""                  # e.g. "22:00"
+  night_start: "21:00"         # from here "Take a nap" reads "Go to bed"
+  # alarm = it picks a wake hour off a menu as it settles in.
+  # fixed  = it always wakes at wake_time, and is told so.
+  wake_mode: alarm
+  wake_time: "08:00"           # fixed mode, and the fallback if the ask fails
+  alarm_hours: [4, 5, 6, 7, 8, 9, 10, 11]   # hours offered in alarm mode
+  # Minutes offered in the nap menu. Durations that would run into the night
+  # are hidden automatically, and an early-night option is offered instead.
   nap_durations: [20, 60, 120]
 
 memory:
@@ -132,9 +142,11 @@ activities:
   journal:
     enabled: true
   nap:
-    enabled: true              # lengths come from day_cycle.nap_durations above;
-                               # works with the day cycle off, there is just no
-                               # bedtime to cut a nap short
+    enabled: true              # lengths come from day_cycle.nap_durations above.
+                               # This is also the "Go to bed" entry: with
+                               # day_cycle.enabled off it is naps only, and with
+                               # it on the entry becomes the night after
+                               # day_cycle.night_start
     real_time: true            # false = naps return instantly (demos and testing)
   ponder:
     enabled: true

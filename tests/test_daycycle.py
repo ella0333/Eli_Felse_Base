@@ -32,8 +32,14 @@ def fake():
 
 @pytest.fixture
 def dapp(config, persona, fake):
-    """App with the day cycle enabled and time fully faked."""
+    """App on the old fixed schedule: 22:00 bedtime, always wakes at 08:00.
+
+    Not the defaults any more, but it is the arrangement most of these tests
+    are about. The no-bedtime and alarm paths set their own.
+    """
     config.day_cycle.enabled = True
+    config.day_cycle.bedtime = "22:00"
+    config.day_cycle.wake_mode = "fixed"
     provider = MockProvider(config)
     return App(config, persona, provider=provider, clock=fake.now, sleep_fn=fake.sleep)
 
@@ -60,6 +66,37 @@ def test_in_sleep_window_same_day_and_degenerate(dapp):
 
     dc.config.wake_time = "01:00"  # bed == wake -> never sleeps
     assert dc.in_sleep_window(day.replace(hour=1)) is False
+
+
+def test_no_bedtime_is_never_a_sleep_window(dapp):
+    """The default. Nothing is scheduled, so no hour is ever "time for bed"."""
+    dc = DayCycle(dapp)
+    dc.config.bedtime = ""
+    day = datetime(2026, 7, 3, 0, 0)
+    assert dc.in_sleep_window(day.replace(hour=23)) is False
+    assert dc.in_sleep_window(day.replace(hour=3)) is False
+    assert dc.has_bedtime is False
+
+
+def test_night_window_ends_at_the_earliest_alarm(dapp):
+    """In alarm mode the night runs until the first hour it could have set."""
+    dc = DayCycle(dapp)
+    dc.config.bedtime = ""
+    dc.config.wake_mode = "alarm"  # alarm_hours 4..11 -> night ends at 04:00
+    day = datetime(2026, 7, 3, 0, 0)
+    assert dc.night_ends_at() == "04:00"
+    assert dc.in_night_window(day.replace(hour=21)) is True   # night_start
+    assert dc.in_night_window(day.replace(hour=2)) is True
+    assert dc.in_night_window(day.replace(hour=4)) is False
+    assert dc.in_night_window(day.replace(hour=20, minute=59)) is False
+
+
+def test_night_window_ends_at_wake_time_when_fixed(dapp):
+    dc = DayCycle(dapp)  # fixed mode, 08:00
+    day = datetime(2026, 7, 3, 0, 0)
+    assert dc.night_ends_at() == "08:00"
+    assert dc.in_night_window(day.replace(hour=6)) is True
+    assert dc.in_night_window(day.replace(hour=8)) is False
 
 
 def test_seconds_until(dapp):
@@ -134,6 +171,45 @@ async def test_failed_bedtime_answer_never_forces_sleep(dapp, fake):
     assert fake.sleeps == []  # never slept on an error
 
 
+# ~~~ waking up ~~~
+async def test_alarm_menu_sets_the_wake_hour(dapp, fake):
+    """It picks its own wake time, and the night runs exactly that long."""
+    fake.now_dt = datetime(2026, 7, 3, 22, 0)
+    dapp.config.day_cycle.bedtime = ""
+    dapp.config.day_cycle.wake_mode = "alarm"
+    dc = DayCycle(dapp)
+    dapp.provider.feed({"thinking": "a long one", "choice": "C"})  # 4,5,6 -> 06:00
+
+    note = await dc.night_sleep()
+    assert fake.sleeps[-1] == 8 * 3600  # 22:00 -> 06:00
+    assert "You just woke up" in note
+
+    menu_text = str(dapp.provider.calls[0]["messages"])
+    assert "A) 4:00 AM (6 hours of sleep)" in menu_text
+    assert "C) 6:00 AM (8 hours of sleep)" in menu_text
+    assert "H) 11:00 AM (13 hours of sleep)" in menu_text
+    # Every hour is offered; there is no cap on how long it may sleep.
+    assert dapp.provider.calls[0]["schema"]["properties"]["choice"]["enum"] == list("ABCDEFGH")
+
+
+async def test_alarm_answer_that_fails_falls_back_to_wake_time(dapp, fake):
+    fake.now_dt = datetime(2026, 7, 3, 22, 0)
+    dapp.config.day_cycle.wake_mode = "alarm"
+    dc = DayCycle(dapp)
+    dapp.provider.feed(*["garbage"] * 5)  # exhausts the validation loop
+
+    await dc.night_sleep()
+    assert fake.sleeps[-1] == 10 * 3600  # 22:00 -> 08:00, the configured fallback
+
+
+async def test_fixed_mode_never_asks(dapp, fake):
+    fake.now_dt = datetime(2026, 7, 3, 22, 0)
+    dc = DayCycle(dapp)  # fixed mode
+    await dc.night_sleep()
+    assert fake.sleeps[-1] == 10 * 3600
+    assert dapp.provider.calls == []  # nothing to choose, so nothing is asked
+
+
 # ~~~ naps ~~~
 async def test_nap_completes_in_chunks(dapp, fake):
     dc = DayCycle(dapp)
@@ -170,6 +246,17 @@ async def test_nap_keeps_sleeping_asks_only_once(dapp, fake):
     assert len(naps_asked) == 1  # once asked, the answer stands
 
 
+async def test_nap_that_runs_into_the_night_becomes_the_night(dapp, fake):
+    """No bedtime to collide with, but a nap ending at 9pm still ends the day."""
+    fake.now_dt = datetime(2026, 7, 3, 20, 59, 30)
+    dapp.config.day_cycle.bedtime = ""
+    dc = DayCycle(dapp)  # fixed mode, so no alarm menu in the way
+
+    note = await dc.nap(10)
+    assert "You just woke up" in note  # the night's wake note, not "completed"
+    assert fake.sleeps[-1] == 11 * 3600  # 21:00 -> 08:00
+
+
 async def test_nap_interrupted_by_stop_request(dapp, fake):
     dc = DayCycle(dapp)
     dapp.control.request_stop()
@@ -199,8 +286,16 @@ async def test_startup_registers_daycycle(dapp):
 
 
 async def test_daycycle_built_but_unhooked_when_disabled(dapp):
-    """Disabled means no bedtime, not no day cycle. Naps still need the object."""
+    """Disabled means it never sleeps, not no day cycle. Naps need the object."""
     dapp.config.day_cycle.enabled = False
+    await dapp.startup(discover=False)
+    assert dapp.daycycle is not None
+    assert dapp.daycycle.check_bedtime not in dapp.scheduler.pre_menu_hooks
+
+
+async def test_no_bedtime_wires_no_hook(dapp):
+    """Sleeping with no bedtime is the default, and nothing interrupts the menu."""
+    dapp.config.day_cycle.bedtime = ""
     await dapp.startup(discover=False)
     assert dapp.daycycle is not None
     assert dapp.daycycle.check_bedtime not in dapp.scheduler.pre_menu_hooks

@@ -93,7 +93,7 @@ enough to watch an LLM run autonomously on its own.
 | **Journal** | Writes a dated journal entry to `data/journal/` |
 | **Ponder** | Thinks something over across a few turns, then returns to the menu |
 | **Eat** | Picks from food and drink options, which takes real time |
-| **Nap** | Naps for a set duration, or turns in early when bedtime is close |
+| **Nap** | Naps for a set duration, and becomes "Go to bed" once night falls |
 | **Chat** | Talks with you in the terminal |
 | **Environment** | Moves between the locations in your config, with live weather |
 
