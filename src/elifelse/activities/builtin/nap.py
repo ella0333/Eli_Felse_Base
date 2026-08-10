@@ -122,8 +122,10 @@ class NapActivity(Activity):
 
         choice = await ctx.choose(prompt, values, labels=labels)
         if choice == EARLY_NIGHT:
-            ctx.set_status("going to bed early")
-            print_system("nap — going to bed early")
+            # Same destination as the "Go to bed" entry, reached from the
+            # duration menu instead, so it reads the same in the log.
+            ctx.set_status("going to bed")
+            print_system("nap — going to bed for the night")
             return await ctx.app.daycycle.night_sleep()
 
         minutes = int(choice)
