@@ -85,9 +85,10 @@ inner_life:
 environment:
   enabled: true
   weather: true                # live weather via Open-Meteo (free, no key)
-  # Where it is right now. Leave empty and the agent chooses for itself on its
-  # first run, before it ever sees the main menu; after that this is written
-  # back by saves. Setting it here just skips that first choice.
+  # The environment it is in right now. Leave empty and the agent chooses for
+  # itself on its first run, before it ever sees the main menu, and can change
+  # it from the menu after; saves write the current one back here. Setting it
+  # by hand just skips that first choice.
   current: ""
   # These three are the built-in defaults, listed here so they are easy to
   # replace. Delete the block entirely and you still get exactly this.

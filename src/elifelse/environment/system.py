@@ -45,10 +45,11 @@ class EnvironmentSystem:
         self.clock = clock
         first = next(iter(self.locations))
         self.current_key = config.current if config.current in self.locations else first
-        # Whether anyone has actually decided this yet. current_key always
-        # points somewhere so nothing downstream has to handle "nowhere", but
-        # until this flips the agent has not chosen, and a fresh run asks it.
-        # Restoring a save flips it too, so it is only ever asked once.
+        # Whether the environment has actually been decided yet. current_key
+        # always points somewhere so nothing downstream has to handle
+        # "nowhere", but until this flips the agent has not chosen, and a
+        # first run asks it. Restoring a save flips it too, so the question
+        # comes up once rather than every boot.
         self.chosen = config.current in self.locations
         self.weather_now: WeatherNow | None = None
 
@@ -67,11 +68,12 @@ class EnvironmentSystem:
         return True
 
     async def _labels(self) -> list[str]:
-        """One line per place, carrying its live conditions where we have them.
+        """One line per environment, carrying its live conditions where we
+        have them.
 
-        The weather for every place is fetched up front, not just the current
-        one, so the choice is made against what the skies are actually doing
-        rather than against three descriptions that never change.
+        The weather for every environment is fetched up front, not just the
+        current one, so the choice is made against what the skies are actually
+        doing rather than against descriptions that never change.
         """
         labels = []
         for key, loc in self.locations.items():
@@ -90,14 +92,19 @@ class EnvironmentSystem:
             loc = self.current
             self.weather_now = await self.weather.current(loc.latitude, loc.longitude)
 
-    async def select(self, app: App, question: str) -> str:
-        """Put the places to the agent and move to whichever it picks.
+    async def select(self, app: App) -> str:
+        """Put the environments to the agent and move it to whichever it picks.
 
-        The one routine behind both callers, the same way the live system has
-        the startup pick and the menu activity share `run_environment_select`.
-        Returns a note for the next menu.
+        The one routine behind both callers, the first-run choice and the menu
+        activity, so neither can drift from the other. Returns a note for the
+        next menu.
         """
-        menu = build_choice_menu(question, list(self.locations), labels=await self._labels())
+        menu = build_choice_menu(
+            "Choose your environment. This is where you will exist until you "
+            "change it again.",
+            list(self.locations),
+            labels=await self._labels(),
+        )
         result = await app.provider.generate(menu.text, schema=app.schemas.menu(menu.letters))
         choice = menu.mapping.get(str(result.get("choice", "")).strip().upper())
         if choice is None:
@@ -107,8 +114,8 @@ class EnvironmentSystem:
         if choice == self.current_key and self.chosen:
             return f"You looked around, but decided to stay at {self.current.name}."
         self.set_current(choice)
-        await self.refresh()  # new place, fetch its weather
-        return f"You settled into {self.current.name}."
+        await self.refresh()  # new environment, fetch its weather
+        return f"You moved to {self.current.name}."
 
     def prompt_block(self) -> str:
         loc = self.current

@@ -431,19 +431,21 @@ def _ask_sleep(io: WizardIO, config: Config) -> None:
 def _ask_environment(io: WizardIO) -> EnvironmentConfig:
     """Live weather, and nothing else.
 
-    Where the agent lives is not asked. It is a built-in activity with default
-    places, and which one it starts in is the agent's own first decision, made
-    on its first run. That leaves one genuine question here, because weather is
-    the only part that calls out to another service.
+    Which environment the agent is in is not asked. It is a built-in activity
+    with default environments, and which one it starts in is the agent's own
+    first decision, made on its first run and changeable after. That leaves
+    one real question here, because weather is the only part of it that calls
+    out to another service.
     """
     env = EnvironmentConfig()
 
     io.say("")
-    io.say("The agent lives somewhere, and it picks where on its first run: a")
-    io.say("hillside cabin, a city loft or a seaside cottage. Where it is goes")
-    io.say("into its prompt and colors what it writes and how it feels.")
+    io.say("The agent exists in an environment, and picks which one on its first")
+    io.say("run: a hillside cabin, a city loft or a seaside cottage. It can change")
+    io.say("later. The environment goes into its prompt as background, coloring")
+    io.say("its mood and writing without it narrating the scenery.")
     io.say("")
-    io.say("Each place can carry its own real weather, looked up from Open-Meteo.")
+    io.say("Each environment can carry its own real weather, from Open-Meteo.")
     io.say("No key, no account.")
     env.weather = io.yesno("Use real weather?", default=True)
     io.say("edit environment.locations in config.yaml to use places of your own")

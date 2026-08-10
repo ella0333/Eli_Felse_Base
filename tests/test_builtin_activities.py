@@ -407,7 +407,7 @@ async def test_environment_move(app, mock_provider):
 
     mock_provider.feed({"thinking": "t", "choice": "B"})  # The Attic
     note = await activity.run(ctx)
-    assert note == "You settled into The Attic."
+    assert note == "You moved to The Attic."
     assert app.environment.current_key == "attic"
     # One letter per configured location; the model reads names, not keys.
     assert mock_provider.calls[0]["schema"]["properties"]["choice"]["enum"] == ["A", "B"]
@@ -426,8 +426,8 @@ async def test_environment_staying_put(app, mock_provider):
     assert app.environment.current_key == "garden"
 
 
-async def test_first_run_asks_where_to_live(app, mock_provider):
-    """Nothing chosen yet, so the agent picks before it sees the main menu."""
+async def test_first_run_asks_for_an_environment(app, mock_provider):
+    """No environment chosen yet, so the agent picks before it sees the main menu."""
     app.environment = _env(current="")
     assert app.environment.chosen is False
     mock_provider.feed(
@@ -440,12 +440,12 @@ async def test_first_run_asks_where_to_live(app, mock_provider):
     assert app.environment.current_key == "attic"
     assert app.environment.chosen is True
     opening = str(mock_provider.calls[0]["messages"])
-    assert "Where do you want to live?" in opening
+    assert "This is where you will exist until you change it again" in opening
     assert "(you are here)" not in opening  # it isn't anywhere yet
 
 
 async def test_a_restored_place_is_not_asked_about(app, mock_provider):
-    """Loading a save already put it somewhere, so the loop goes straight in."""
+    """Loading a save already set an environment, so the loop goes straight in."""
     app.environment = _env(current="")
     app.environment.set_current("attic")  # what a crash or save restore does
     assert app.environment.chosen is True

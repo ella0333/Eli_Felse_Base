@@ -95,7 +95,7 @@ enough to watch an LLM run autonomously on its own.
 | **Eat** | Picks from food and drink options, which takes real time |
 | **Nap** | Naps for a set duration, and becomes "Go to bed" once night falls |
 | **Chat** | Talks with you in the terminal |
-| **Environment** | Picks where it lives on its first run, and moves later, with live weather |
+| **Environment** | Chooses its environment on the first run and changes it later, with live weather |
 
 All six are on by default. To switch any of them off, set that activity's `enabled` to
 `false` under `activities` in `config.yaml`. The same flag works for modules you install

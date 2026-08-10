@@ -105,9 +105,10 @@ The wizard walks you through everything:
   whether it picks its own bedtime or keeps one you set, and whether it picks its own
   wake time each night or always wakes at the same hour. Saying no to sleeping skips
   the other two.
-- **Weather:** whether each place carries its real conditions, from Open-Meteo. Where
-  the agent lives is not asked: it ships with three places and chooses between them
-  itself, on its first run, before it ever reaches the main menu.
+- **Weather:** whether each environment carries its real conditions, from Open-Meteo.
+  Which environment the agent is in is not asked: three ship with it, and the agent
+  chooses between them itself on its first run, before it reaches the main menu. It
+  can change to another one from the menu at any time.
 - **Character:** name, pronouns, personality, backstory for your AI persona
 
 When it's done, it writes `config.yaml` and `persona.yaml`, then runs a quick connection

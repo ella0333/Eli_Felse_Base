@@ -30,6 +30,6 @@ class EnvironmentActivity(Activity):
         return f"currently: {env.current.name}" if env is not None else ""
 
     async def run(self, ctx: ActivityContext) -> str:
-        # Same routine the first run uses to ask where it wants to be, so a
-        # move mid-day and the opening choice read and behave identically.
-        return await ctx.app.environment.select(ctx.app, "Where would you like to be?")
+        # The same routine the first run uses, so a move mid-day and the
+        # opening choice read and behave identically.
+        return await ctx.app.environment.select(ctx.app)
