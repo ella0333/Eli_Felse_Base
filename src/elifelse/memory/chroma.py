@@ -13,15 +13,40 @@ from typing import Any
 
 from elifelse.memory.store import MemoryHit, MemoryStore
 
+# The collections the framework itself uses. Opened once at startup so a store
+# that can't be read fails there, with an explanation, instead of hours later
+# in the middle of an activity.
+_KNOWN_COLLECTIONS = ("memories", "summaries", "facts")
+
+
+class StoreUnreadable(Exception):
+    """The store exists but this chromadb can't open it."""
+
 
 class ChromaStore(MemoryStore):
     def __init__(self, path: Path) -> None:
         import chromadb  # heavy import, kept out of module load
         from chromadb.config import Settings
 
-        self._client = chromadb.PersistentClient(
-            path=str(path), settings=Settings(anonymized_telemetry=False)
-        )
+        try:
+            self._client = chromadb.PersistentClient(
+                path=str(path), settings=Settings(anonymized_telemetry=False)
+            )
+            for name in _KNOWN_COLLECTIONS:
+                self._coll(name)
+        except Exception as e:
+            # Chroma raises whatever its own loader raises, and none of it says
+            # what to do. The common cause by far is a store written by a
+            # different chromadb, which surfaces as a KeyError deep in its
+            # config parser, so say the useful thing here instead.
+            raise StoreUnreadable(
+                f"could not open the memory store at {path}\n"
+                f"  chromadb {chromadb.__version__} raised {type(e).__name__}: {e}\n"
+                f"  Usually this means the store was written by a different "
+                f"chromadb version. Either install the version that wrote it, "
+                f"or delete {path} to start a fresh one (stored memories are "
+                f"lost; journals, saves and profiles are not)."
+            ) from e
 
     def _coll(self, name: str):
         return self._client.get_or_create_collection(name, metadata={"hnsw:space": "cosine"})

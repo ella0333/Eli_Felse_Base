@@ -250,3 +250,51 @@ async def test_lifecycle_still_flushes_a_declared_subject(app, mock_provider, st
 
     assert await store.count("memories") == 1
     assert not [k for k, v in app.memory.buffers.items() if v]
+
+
+# ~~~ an unreadable store ~~~
+def test_unreadable_store_raises_a_useful_error(tmp_path, monkeypatch):
+    """Chroma's own error names a KeyError deep in its config parser. Ours has
+    to say what happened and what to do about it."""
+    from elifelse.memory import chroma
+
+    class Boom:
+        def __init__(self, *a, **k):
+            pass
+
+        def get_or_create_collection(self, *a, **k):
+            raise KeyError("_type")  # what a store from another version does
+
+    monkeypatch.setattr("chromadb.PersistentClient", Boom)
+    with pytest.raises(chroma.StoreUnreadable) as excinfo:
+        chroma.ChromaStore(tmp_path / "chromadb")
+
+    message = str(excinfo.value)
+    assert "different chromadb version" in message
+    assert str(tmp_path / "chromadb") in message  # the exact path to delete
+    assert "KeyError" in message                  # what chroma actually said
+
+
+async def test_an_unreadable_store_does_not_stop_the_agent(config, persona, monkeypatch, capsys):
+    """Memory off beats no agent: the run continues, loudly, with memory None."""
+    from elifelse.app import App
+    from elifelse.providers.mock import MockProvider
+
+    config.memory.enabled = True
+
+    class Boom:
+        def __init__(self, *a, **k):
+            pass
+
+        def get_or_create_collection(self, *a, **k):
+            raise KeyError("_type")
+
+    monkeypatch.setattr("chromadb.PersistentClient", Boom)
+    app = App(config, persona, provider=MockProvider(config))
+    await app.startup(discover=False)
+
+    assert app.memory is None       # ctx.recall returns [] off this
+    assert app.summaries is None    # lifecycle skips the summary off this
+    out = capsys.readouterr().out
+    assert "memory unavailable" in out
+    assert "continuing without memory" in out

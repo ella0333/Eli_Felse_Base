@@ -27,6 +27,7 @@ from elifelse.paths import Paths
 from elifelse.persona import Persona
 from elifelse.providers import Provider, create_provider
 from elifelse.structured.registry import SchemaRegistry
+from elifelse.textutils import print_system
 from elifelse.trackers.activity import ActivityTracker
 from elifelse.trackers.limits import DailyLimits
 from elifelse.trackers.stats import StatsTracker
@@ -125,11 +126,21 @@ class App:
         """Wire memory + summaries (skipped when disabled or pre-injected by tests)."""
         if not self.config.memory.enabled or self.memory is not None:
             return
-        from elifelse.memory.chroma import ChromaStore
+        from elifelse.memory.chroma import ChromaStore, StoreUnreadable
         from elifelse.memory.system import MemorySystem
         from elifelse.summary.system import SummarySystem
 
-        store = ChromaStore(self.paths.chromadb)
+        try:
+            store = ChromaStore(self.paths.chromadb)
+        except StoreUnreadable as e:
+            # Memory off beats no agent. Every caller already handles a missing
+            # memory system (ctx.recall returns nothing, lifecycle skips the
+            # summary), so the run goes ahead without it and says so loudly.
+            print_system(f"memory unavailable: {e}")
+            print_system("continuing without memory: nothing will be recalled or stored")
+            self.logger.warning("memory store unavailable: %s", e)
+            return
+
         self.memory = MemorySystem(self.provider, store, self.config.memory,
                                    self.schemas, self.clock)
         self.summaries = SummarySystem(self.provider, store, self.config.summary,
