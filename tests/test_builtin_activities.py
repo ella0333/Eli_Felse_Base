@@ -444,6 +444,38 @@ async def test_first_run_asks_for_an_environment(app, mock_provider):
     assert "(you are here)" not in opening  # it isn't anywhere yet
 
 
+async def test_every_menu_the_agent_sees_is_printed(app, mock_provider, capsys):
+    """A menu that only goes to the model leaves the terminal on 'thinking...'."""
+    app.environment = _env(current="")
+    mock_provider.feed(
+        {"thinking": "the attic", "choice": "B"},
+        {"thinking": "write", "choice": "A"},
+    )
+    app.registry.register(JournalActivity)
+
+    await app.controller.main_loop(max_iterations=1)
+    out = capsys.readouterr().out
+    assert "Choose your environment" in out  # the menu itself
+    assert "B) The Attic" in out             # every option
+    assert "the attic" in out                # its reasoning
+    assert "Choice: B" in out                # what it picked
+
+
+async def test_the_dispatch_line_echoes_the_menu_label(config, persona, capsys):
+    """The menu said "Go to bed", so the choice line has to say that too."""
+    config.day_cycle.enabled = True  # default: no bedtime, 21:00 night start
+    app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 21, 30))
+    provider.feed(
+        {"thinking": "worn out", "choice": "A"},   # the only entry: nap, as "Go to bed"
+        {"thinking": "early", "choice": "A"},      # the alarm menu
+    )
+    await app.controller.main_loop(max_iterations=1)
+    out = capsys.readouterr().out
+    assert "A) Go to bed" in out
+    assert "Choice: A — Go to bed" in out
+    assert "Take a nap" not in out
+
+
 async def test_a_restored_place_is_not_asked_about(app, mock_provider):
     """Loading a save already set an environment, so the loop goes straight in."""
     app.environment = _env(current="")

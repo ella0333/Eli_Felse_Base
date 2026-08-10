@@ -67,7 +67,7 @@ async def _flush_activity_memory(app: App, activity: Activity, subject: str) -> 
 
 async def run_activity(app: App, activity: Activity, subject: str = "") -> str:
     ctx = app.registry.ctx_for(activity)
-    label = activity.menu_label
+    label = activity.get_menu_label(ctx)  # what the menu said, not the class default
     subject = subject or activity.get_subject(ctx)
 
     # 1-2. status + tracker

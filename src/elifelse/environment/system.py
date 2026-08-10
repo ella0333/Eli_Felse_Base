@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from elifelse.config import EnvironmentConfig, EnvironmentLocation
-from elifelse.loop.menus import build_choice_menu
+from elifelse.loop.menus import ask_menu, build_choice_menu
 from elifelse.textutils import print_system
 
 if TYPE_CHECKING:
@@ -105,8 +105,7 @@ class EnvironmentSystem:
             list(self.locations),
             labels=await self._labels(),
         )
-        result = await app.provider.generate(menu.text, schema=app.schemas.menu(menu.letters))
-        choice = menu.mapping.get(str(result.get("choice", "")).strip().upper())
+        choice = await ask_menu(app, menu)
         if choice is None:
             # Never strand it nowhere on a bad answer: stay put, stay chosen.
             self.chosen = True

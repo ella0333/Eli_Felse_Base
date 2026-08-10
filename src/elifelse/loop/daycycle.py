@@ -23,7 +23,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
-from elifelse.loop.menus import build_alarm_menu, build_bedtime_menu, build_choice_menu
+from elifelse.loop.menus import (
+    ask_menu,
+    build_alarm_menu,
+    build_bedtime_menu,
+    build_choice_menu,
+)
 from elifelse.textutils import format_time_12h, print_system
 
 if TYPE_CHECKING:
@@ -124,8 +129,7 @@ class DayCycle:
             return None
 
         menu = build_bedtime_menu(self.config.bedtime)
-        result = await app.provider.generate(menu.text, schema=app.schemas.menu(menu.letters))
-        if menu.mapping.get(str(result.get("choice", "")).strip().upper()) == "sleep":
+        if await ask_menu(app, menu) == "sleep":
             return await self.night_sleep()
         # stay_up (or a failed response — never force the issue on an error)
         self._defer_until = now + STAY_UP_DEFER
@@ -145,10 +149,7 @@ class DayCycle:
             return self.config.wake_time
 
         menu, hours = build_alarm_menu(self.app.clock(), self.config.alarm_hours)
-        result = await self.app.provider.generate(
-            menu.text, schema=self.app.schemas.menu(menu.letters)
-        )
-        key = menu.mapping.get(str(result.get("choice", "")).strip().upper())
+        key = await ask_menu(self.app, menu)
         if key is None:
             return self.config.wake_time
         return f"{hours[int(key)]:02d}:00"
@@ -216,10 +217,7 @@ class DayCycle:
                     options=["wake_up", "keep_sleeping"],
                     labels=["Wake up now", "Keep sleeping"],
                 )
-                result = await app.provider.generate(
-                    menu.text, schema=app.schemas.menu(menu.letters)
-                )
-                if menu.mapping.get(str(result.get("choice", "")).strip().upper()) == "wake_up":
+                if await ask_menu(app, menu) == "wake_up":
                     return "interrupted"
         return "completed"
 

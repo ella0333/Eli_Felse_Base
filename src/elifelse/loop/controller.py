@@ -103,7 +103,11 @@ class Controller:
                 print(f"\nThinking: {result['thinking']}")
             choice_letter = result["choice"]
             activity = app.registry.get(menu.mapping[choice_letter])
-            print(f"Choice: {choice_letter} — {activity.menu_label}")
+            # get_menu_label, not menu_label: an activity whose entry changes
+            # with the time of day (nap becoming "Go to bed") must be echoed
+            # back as the thing that was actually on the menu.
+            label = activity.get_menu_label(app.registry.ctx_for(activity))
+            print(f"Choice: {choice_letter} — {label}")
             self.note = await run_activity(app, activity)
 
         # loop budget reached (only used with --max-iterations)

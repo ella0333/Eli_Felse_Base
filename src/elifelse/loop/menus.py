@@ -37,6 +37,25 @@ def letters_for(count: int) -> list[str]:
     return letters
 
 
+async def ask_menu(app: Any, menu: Menu) -> str | None:
+    """Show a menu, put it to the agent, and return the option it picked.
+
+    None when the answer was unusable, which every caller handles its own way.
+    This is the counterpart to ctx.choose() for menus the framework itself
+    asks: printing before the call is the point, so the terminal always shows
+    what the model was shown rather than a silent pause on "thinking...".
+    """
+    print(f"\n{menu.text}")
+    result = await app.provider.generate(menu.text, schema=app.schemas.menu(menu.letters))
+    if result.get("thinking"):
+        print(f"\nThinking: {result['thinking']}")
+    letter = str(result.get("choice", "")).strip().upper()
+    if letter not in menu.mapping:
+        return None
+    print(f"Choice: {letter}")
+    return menu.mapping[letter]
+
+
 def build_choice_menu(
     question: str,
     options: list[str],
