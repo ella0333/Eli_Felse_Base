@@ -408,18 +408,21 @@ def _ask_sleep(io: WizardIO, config: Config) -> None:
         return
 
     io.say("")
-    if io.yesno("Would you like to give it a set bedtime?", default=False):
+    if io.yesno(
+        "Do you want to give it a set bedtime? If not, the model will choose "
+        "on its own.", default=False,
+    ):
         dc.bedtime = io.hhmm("Bedtime", default="22:00")
-    else:
-        io.say("it will choose on its own. At 9:00 PM 'Take a nap' becomes 'Go to bed'.")
 
     io.say("")
-    if io.yesno("Would you like to give it a set wake time?", default=False):
+    if io.yesno(
+        "Do you want to give it a set wake time? If not, the model will choose "
+        "on its own.", default=False,
+    ):
         dc.wake_mode = "fixed"
         dc.wake_time = io.hhmm("Wake time", default="08:00")
     else:
         dc.wake_mode = "alarm"
-        io.say("it will choose on its own, setting an alarm each night before bed.")
 
 
 def _ask_environment(io: WizardIO) -> EnvironmentConfig:
