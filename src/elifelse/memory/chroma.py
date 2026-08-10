@@ -43,9 +43,13 @@ class ChromaStore(MemoryStore):
                 f"could not open the memory store at {path}\n"
                 f"  chromadb {chromadb.__version__} raised {type(e).__name__}: {e}\n"
                 f"  Usually this means the store was written by a different "
-                f"chromadb version. Either install the version that wrote it, "
-                f"or delete {path} to start a fresh one (stored memories are "
-                f"lost; journals, saves and profiles are not)."
+                f"chromadb, most often because the command being run comes from "
+                f"a different environment than the one it was installed into. "
+                f"Check 'python -c \"import chromadb, sys; "
+                f"print(sys.executable, chromadb.__version__)\"' against the "
+                f"environment that created it. Otherwise delete {path} to start "
+                f"a fresh store (stored memories are lost; journals, saves and "
+                f"profiles are not)."
             ) from e
 
     def _coll(self, name: str):

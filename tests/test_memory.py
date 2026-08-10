@@ -270,7 +270,8 @@ def test_unreadable_store_raises_a_useful_error(tmp_path, monkeypatch):
         chroma.ChromaStore(tmp_path / "chromadb")
 
     message = str(excinfo.value)
-    assert "different chromadb version" in message
+    assert "written by a different chromadb" in message
+    assert "different environment" in message     # the usual real cause
     assert str(tmp_path / "chromadb") in message  # the exact path to delete
     assert "KeyError" in message                  # what chroma actually said
 
