@@ -132,7 +132,9 @@ activities:
   journal:
     enabled: true
   nap:
-    enabled: true              # needs day_cycle.nap_durations above
+    enabled: true              # lengths come from day_cycle.nap_durations above;
+                               # works with the day cycle off, there is just no
+                               # bedtime to cut a nap short
     real_time: true            # false = naps return instantly (demos and testing)
   ponder:
     enabled: true

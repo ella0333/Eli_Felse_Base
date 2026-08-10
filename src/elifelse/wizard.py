@@ -615,16 +615,15 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
     _run_probe(config, config_path, base / ".env", io)
 
     io.say("")
-    active = ["chat", "eat", "journal", "ponder"]
+    # Environment is the only built-in that gates on something asked here.
+    # Nap looks like it should too, but the day cycle is always built and only
+    # its bedtime hook is behind the toggle, so naps work either way.
+    active = ["chat", "eat", "journal", "nap", "ponder"]
     if config.environment.locations:
-        active.insert(2, "environment")
-    if config.day_cycle.enabled:
-        active.insert(3, "nap")
-    io.say(f"Activities on: {', '.join(active)}.")
+        active.append("environment")
+    io.say(f"Activities on: {', '.join(sorted(active))}.")
     if not config.environment.locations:
         io.say("environment is off until you give it somewhere to be.")
-    if not config.day_cycle.enabled:
-        io.say("nap is off until the day cycle is on.")
     io.say("Turn any of them off in config.yaml under 'activities' by setting")
     io.say("that activity's 'enabled' to false. Same flag for modules you add later.")
     io.say("")
