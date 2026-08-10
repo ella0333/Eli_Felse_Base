@@ -40,6 +40,7 @@ def test_local_lmstudio_defaults(tmp_path):
         "11:00 PM",   # bedtime (12h format)
         "y",          # give it a set wake time
         "",           # wake default (shows as 8:00 AM)
+        "",           # use the default environments -> yes
         "",           # real weather -> yes
         "Nova",       # persona name
         "",           # pronouns default
@@ -89,6 +90,7 @@ def test_paid_api_requires_explicit_spend_cap(tmp_path):
         "150000",
         "2",           # pacing instant
         "n",           # no sleeping (skips bedtime and wake)
+        "",            # use the default environments -> yes
         "n",           # no live weather
         "Nova", "", "", "",
         "sk-test-key-123",  # actual API key
@@ -112,6 +114,7 @@ def test_paid_api_unlimited_needs_confirmation(tmp_path):
         "UNLIMITED", "y",        # confirmed unlimited
         "3", "0", "5",           # custom pacing 0..5
         "n",                     # no sleeping (skips bedtime and wake)
+        "",                      # use the default environments -> yes
         "n",                     # no live weather
         "Nova", "", "", "",
         "sk-test-456",           # actual API key
@@ -131,6 +134,7 @@ def test_sleeping_with_no_bedtime_is_the_default_path(tmp_path):
         "",        # let it sleep -> default yes
         "",        # set bedtime? -> default no, it picks
         "",        # set wake time? -> default no, it picks
+        "",        # use the default environments -> yes
         "n",       # no live weather
         "Nova", "", "", "",
     ]
@@ -150,6 +154,7 @@ def test_no_sleeping_skips_the_rest_of_the_block(tmp_path):
         "",        # owner
         "4",       # mock provider
         "n",       # no sleeping
+        "",        # use the default environments -> yes
         "n",       # no live weather
         "Nova", "", "", "",
     ]
@@ -159,6 +164,24 @@ def test_no_sleeping_skips_the_rest_of_the_block(tmp_path):
     config = load_config(tmp_path / "config.yaml")
     assert config.day_cycle.enabled is False
     assert config.day_cycle.bedtime == ""
+
+
+def test_declining_the_default_environments_leaves_it_off(tmp_path):
+    """No locations is what hides the activity, and weather goes with them."""
+    answers = [
+        "",        # owner
+        "4",       # mock provider
+        "n",       # no sleeping
+        "n",       # don't use the default environments (skips the weather ask)
+        "Nova", "", "", "",
+    ]
+    rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
+    assert rc == 0
+
+    config = load_config(tmp_path / "config.yaml")
+    assert config.environment.locations == []
+    assert config.environment.weather is False
+    assert config.environment.enabled is False
 
 
 def test_refuses_overwrite_by_default(tmp_path):
@@ -176,6 +199,7 @@ def test_keeps_existing_persona(tmp_path):
         "y",       # let it sleep
         "",        # set bedtime? -> default no, it picks
         "",        # set wake time? -> default no, it picks
+        "",        # use the default environments -> yes
         "",        # real weather -> yes
         "",        # keep existing persona -> default yes
     ]
@@ -193,6 +217,7 @@ def test_env_stub_appends_without_clobbering(tmp_path):
         "1000",
         "2",          # instant
         "n",          # no sleeping (skips bedtime and wake)
+        "",           # use the default environments -> yes
         "n",          # no live weather
         "Nova", "", "", "",
         "sk-test-789",  # actual API key

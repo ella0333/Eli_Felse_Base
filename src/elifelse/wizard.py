@@ -417,18 +417,29 @@ def _ask_sleep(io: WizardIO, config: Config) -> None:
 
 
 def _ask_environment(io: WizardIO) -> EnvironmentConfig:
-    """Live weather, and nothing else.
+    """The default environments, and whether they carry live weather.
 
-    Which environment the agent is in is not asked. It is a built-in activity
-    with default environments, and which one it starts in is the agent's own
-    first decision, made on its first run and changeable after. That leaves
-    one real question, because weather is the only part of this that calls out
-    to another service. Everything else about environments is documented in
-    config.example.yaml, which is where someone changing them will be looking.
+    Which one the agent starts in is not asked: that is the agent's own first
+    decision, made on its first run and changeable from the menu after. Saying
+    no to the defaults writes no locations at all, which hides the activity
+    until someone adds their own, so it is worth asking rather than assuming.
     """
     env = EnvironmentConfig()
 
     io.say("")
+    if not io.yesno(
+        "Do you want to use the default environments? A hillside cabin, a city "
+        "loft and a seaside cottage.", default=True,
+    ):
+        # Weather is per place, so with no places there is nothing to ask
+        # about. Whoever adds their own sets the coordinates and turns it back
+        # on in the same edit.
+        env.enabled = False
+        env.locations = []
+        env.weather = False
+        io.say("add your own under environment.locations in config.yaml")
+        return env
+
     env.weather = io.yesno(
         "Do you want your agent to have real weather? It's free, no account needed.",
         default=True,
@@ -590,12 +601,16 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
     _run_probe(config, config_path, base / ".env", io)
 
     io.say("")
-    # Every built-in is on. Nothing asked here can switch one off any more:
-    # the day cycle is always built, so an agent that never sleeps for the
-    # night can still nap, and the environment ships with places to be. All
-    # these answers change is what those two menu entries offer.
-    active = ["chat", "eat", "environment", "journal", "nap", "ponder"]
+    # Environment is the only built-in that gates on something asked here: it
+    # hides itself when there is nowhere to be. The day cycle is always built,
+    # so an agent that never sleeps for the night can still nap, and all the
+    # sleep answers change is what that one menu entry offers.
+    active = ["chat", "eat", "journal", "nap", "ponder"]
+    if config.environment.locations:
+        active.append("environment")
     io.say(f"Activities on: {', '.join(sorted(active))}.")
+    if not config.environment.locations:
+        io.say("environment is off until you give it somewhere to be.")
     io.say("Turn any of them off in config.yaml under 'activities' by setting")
     io.say("that activity's 'enabled' to false. Same flag for modules you add later.")
     io.say("")
