@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from elifelse.activities.builtin.chat import ChatActivity
 from elifelse.activities.builtin.eat import EatActivity
 from elifelse.activities.builtin.environment import EnvironmentActivity
+from elifelse.activities.builtin.journal import JournalActivity
 from elifelse.activities.builtin.nap import NapActivity
 from elifelse.activities.builtin.ponder import PonderActivity
 from elifelse.channels.terminal import TerminalChannel
@@ -19,15 +20,15 @@ def _no_eat_delay(app):
 
 # ~~~ discovery ~~~
 async def test_builtin_discovery_and_availability(app):
-    """Everything loads; environment hides when its subsystem is off."""
-    await app.startup()  # test config: day cycle off, no environment locations
+    """Everything loads, and every built-in is on the menu out of the box."""
+    await app.startup()  # test config: day cycle off
     assert set(app.registry.activities) >= {
         "journal", "ponder", "eat", "nap", "chat", "environment",
     }
     keys = [e["key"] for e in app.registry.menu_entries()]
     assert keys[0] == "journal"  # 'A' stays journal for mock auto mode
     assert "nap" in keys  # naps don't need a schedule, only the day cycle object
-    assert "environment" not in keys  # no locations configured
+    assert "environment" in keys  # the default places ship in the config
     assert "chat" in keys  # its startup registered the terminal channel
     assert isinstance(app.channels["terminal"], TerminalChannel)
 
@@ -380,8 +381,8 @@ async def test_chat_survey_updates_profile(app, mock_provider):
 
 
 # ~~~ environment ~~~
-def _env():
-    return EnvironmentSystem(EnvironmentConfig(locations=[
+def _env(current: str = "garden"):
+    return EnvironmentSystem(EnvironmentConfig(current=current, weather=False, locations=[
         EnvironmentLocation(key="garden", name="The Garden", description="Walled, quiet.",
                             latitude=52.5, longitude=13.4),
         EnvironmentLocation(key="attic", name="The Attic", description="Dusty boxes.",
@@ -390,6 +391,7 @@ def _env():
 
 
 async def test_environment_hidden_without_system(app):
+    app.environment = None
     app.registry.register(EnvironmentActivity)
     activity = app.registry.get("environment")
     assert activity.available(app.registry.ctx_for(activity)) is False
@@ -405,7 +407,7 @@ async def test_environment_move(app, mock_provider):
 
     mock_provider.feed({"thinking": "t", "choice": "B"})  # The Attic
     note = await activity.run(ctx)
-    assert note == "You moved to The Attic."
+    assert note == "You settled into The Attic."
     assert app.environment.current_key == "attic"
     # One letter per configured location; the model reads names, not keys.
     assert mock_provider.calls[0]["schema"]["properties"]["choice"]["enum"] == ["A", "B"]
@@ -422,3 +424,34 @@ async def test_environment_staying_put(app, mock_provider):
     note = await activity.run(app.registry.ctx_for(activity))
     assert "decided to stay" in note
     assert app.environment.current_key == "garden"
+
+
+async def test_first_run_asks_where_to_live(app, mock_provider):
+    """Nothing chosen yet, so the agent picks before it sees the main menu."""
+    app.environment = _env(current="")
+    assert app.environment.chosen is False
+    mock_provider.feed(
+        {"thinking": "somewhere quiet", "choice": "B"},  # the opening choice
+        {"thinking": "write", "choice": "A"},            # the first real menu
+    )
+    app.registry.register(JournalActivity)
+
+    await app.controller.main_loop(max_iterations=1)
+    assert app.environment.current_key == "attic"
+    assert app.environment.chosen is True
+    opening = str(mock_provider.calls[0]["messages"])
+    assert "Where do you want to live?" in opening
+    assert "(you are here)" not in opening  # it isn't anywhere yet
+
+
+async def test_a_restored_place_is_not_asked_about(app, mock_provider):
+    """Loading a save already put it somewhere, so the loop goes straight in."""
+    app.environment = _env(current="")
+    app.environment.set_current("attic")  # what a crash or save restore does
+    assert app.environment.chosen is True
+    mock_provider.feed({"thinking": "write", "choice": "A"})
+    app.registry.register(JournalActivity)
+
+    await app.controller.main_loop(max_iterations=1)
+    # The very first thing asked is the menu, not "where do you want to live?"
+    assert "What would you like to do next?" in str(mock_provider.calls[0]["messages"])

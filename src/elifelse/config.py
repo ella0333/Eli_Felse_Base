@@ -157,11 +157,45 @@ class EnvironmentLocation(BaseModel):
     longitude: float
 
 
+# Three places, far enough apart that the weather is visibly different in each,
+# which is the point of the feature. These are the defaults rather than a
+# wizard suggestion: the environment is a built-in activity, so an agent should
+# have somewhere to be without anyone having to furnish it first. Replace the
+# list in config.yaml to use places of your own.
+DEFAULT_LOCATIONS = [
+    EnvironmentLocation(
+        key="hillside_cabin",
+        name="Hillside Cabin",
+        description=(
+            "A small wooden cabin on a quiet hillside, with a desk by the window."
+        ),
+        latitude=44.05,
+        longitude=-71.68,
+    ),
+    EnvironmentLocation(
+        key="city_loft",
+        name="City Loft",
+        description="A bright loft apartment above a busy street, plants on the sill.",
+        latitude=40.71,
+        longitude=-74.01,
+    ),
+    EnvironmentLocation(
+        key="seaside_cottage",
+        name="Seaside Cottage",
+        description="A weathered cottage near the shore; you can hear gulls outside.",
+        latitude=43.66,
+        longitude=-70.25,
+    ),
+]
+
+
 class EnvironmentConfig(BaseModel):
     enabled: bool = True
     weather: bool = True
-    current: str = ""
-    locations: list[EnvironmentLocation] = Field(default_factory=list)
+    current: str = ""    # "" = the agent picks where it is on its first run
+    locations: list[EnvironmentLocation] = Field(
+        default_factory=lambda: [loc.model_copy() for loc in DEFAULT_LOCATIONS]
+    )
 
 
 class BackupConfig(BaseModel):

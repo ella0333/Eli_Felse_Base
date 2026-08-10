@@ -51,7 +51,7 @@ model_params:
     chat_template_kwargs: null # e.g. {enable_thinking: false} for models that need it
 
 day_cycle:
-  enabled: true                # false = always-on, never sleeps (naps still work)
+  enabled: true                # false = always on, never sleeps (naps still work)
   # A scheduled bedtime is optional and off by default. Set one and the agent
   # is told about it and asked to bed when the hour comes, which also means it
   # spends the evening counting down to it. Left empty there is nothing to
@@ -85,7 +85,12 @@ inner_life:
 environment:
   enabled: true
   weather: true                # live weather via Open-Meteo (free, no key)
-  current: "hillside_cabin"
+  # Where it is right now. Leave empty and the agent chooses for itself on its
+  # first run, before it ever sees the main menu; after that this is written
+  # back by saves. Setting it here just skips that first choice.
+  current: ""
+  # These three are the built-in defaults, listed here so they are easy to
+  # replace. Delete the block entirely and you still get exactly this.
   locations:
     - key: "hillside_cabin"
       name: "Hillside Cabin"

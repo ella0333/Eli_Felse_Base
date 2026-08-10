@@ -36,12 +36,10 @@ def test_local_lmstudio_defaults(tmp_path):
         "",           # daily budget default 0 (local)
         "",           # pacing -> lifelike
         "y",          # let it sleep
-        "y",          # set a fixed bedtime
+        "n",          # don't let it pick its bedtime -> ask for one
         "11:00 PM",   # bedtime (12h format)
-        "2",          # wake mode -> the same time every day
+        "n",          # don't let it pick its wake time -> ask for one
         "",           # wake default (shows as 8:00 AM)
-        "",           # environment: set up somewhere to live -> yes
-        "",           # starting place -> hillside cabin
         "",           # real weather -> yes
         "Nova",       # persona name
         "",           # pronouns default
@@ -64,10 +62,12 @@ def test_local_lmstudio_defaults(tmp_path):
     assert config.day_cycle.wake_mode == "fixed"
     assert config.day_cycle.wake_time == "08:00"
 
-    # Somewhere to live, or 'Change the environment' hides itself and the
-    # summary at the end of setup would be claiming an activity that is off.
-    assert len(config.environment.locations) == 3
-    assert config.environment.current == "hillside_cabin"
+    # The default places ship in the config, and which one it starts in is
+    # the agent's own first decision, so setup leaves 'current' empty.
+    assert [loc.key for loc in config.environment.locations] == [
+        "hillside_cabin", "city_loft", "seaside_cottage",
+    ]
+    assert config.environment.current == ""
     assert config.environment.weather is True
 
     persona = load_persona(tmp_path / "persona.yaml")
@@ -88,8 +88,8 @@ def test_paid_api_requires_explicit_spend_cap(tmp_path):
         "n",
         "150000",
         "2",           # pacing instant
-        "n",           # day cycle off
-        "n",           # no environment locations
+        "n",           # no sleeping (skips bedtime and wake)
+        "n",           # no live weather
         "Nova", "", "", "",
         "sk-test-key-123",  # actual API key
     ]
@@ -111,8 +111,8 @@ def test_paid_api_unlimited_needs_confirmation(tmp_path):
         "", "3", "", "m", "",
         "UNLIMITED", "y",        # confirmed unlimited
         "3", "0", "5",           # custom pacing 0..5
-        "n",                     # day cycle off
-        "n",                     # no environment locations
+        "n",                     # no sleeping (skips bedtime and wake)
+        "n",                     # no live weather
         "Nova", "", "", "",
         "sk-test-456",           # actual API key
     ]
@@ -124,14 +124,14 @@ def test_paid_api_unlimited_needs_confirmation(tmp_path):
 
 
 def test_sleeping_with_no_bedtime_is_the_default_path(tmp_path):
-    """Enter through all three sleep questions: sleep yes, bedtime no, alarm."""
+    """All three sleep questions, all left at their defaults."""
     answers = [
         "",        # owner
         "4",       # mock provider
         "",        # let it sleep -> default yes
-        "",        # fixed bedtime -> default no
-        "",        # wake mode -> default alarm
-        "n",       # no environment locations
+        "",        # let it pick its bedtime -> default yes
+        "",        # let it pick its wake time -> default yes
+        "n",       # no live weather
         "Nova", "", "", "",
     ]
     rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
@@ -150,7 +150,7 @@ def test_no_sleeping_skips_the_rest_of_the_block(tmp_path):
         "",        # owner
         "4",       # mock provider
         "n",       # no sleeping
-        "n",       # no environment locations
+        "n",       # no live weather
         "Nova", "", "", "",
     ]
     rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
@@ -174,9 +174,9 @@ def test_keeps_existing_persona(tmp_path):
         "",        # owner
         "4",       # mock provider (skips all provider questions)
         "y",       # let it sleep
-        "",        # fixed bedtime -> default no
-        "",        # wake mode -> default alarm
-        "", "", "",  # environment: yes, first place, weather on
+        "",        # let it pick its bedtime -> default yes
+        "",        # let it pick its wake time -> default yes
+        "",        # real weather -> yes
         "",        # keep existing persona -> default yes
     ]
     rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
@@ -193,7 +193,7 @@ def test_env_stub_appends_without_clobbering(tmp_path):
         "1000",
         "2",          # instant
         "n",          # no sleeping (skips bedtime and wake)
-        "n",          # no environment locations
+        "n",          # no live weather
         "Nova", "", "", "",
         "sk-test-789",  # actual API key
     ]
@@ -202,41 +202,3 @@ def test_env_stub_appends_without_clobbering(tmp_path):
     env_text = (tmp_path / ".env").read_text(encoding="utf-8")
     assert env_text.startswith("OTHER=1\n")
     assert "ELIFELSE_API_KEY=sk-test-789" in env_text
-
-
-def test_declining_the_environment_leaves_it_off(tmp_path):
-    """Saying no writes no locations, which is what hides the activity."""
-    answers = [
-        "",        # owner
-        "4",       # mock provider
-        "n",       # no sleeping (skips bedtime and wake)
-        "n",       # no environment locations
-        "Nova", "", "", "",
-    ]
-    rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
-    assert rc == 0
-
-    config = load_config(tmp_path / "config.yaml")
-    assert config.environment.locations == []
-    assert config.environment.enabled is False
-
-
-def test_the_starting_place_can_be_chosen(tmp_path):
-    answers = [
-        "",        # owner
-        "4",       # mock provider
-        "n",       # no sleeping (skips bedtime and wake)
-        "y",       # set up somewhere to live
-        "3",       # seaside cottage
-        "n",       # no live weather
-        "Nova", "", "", "",
-    ]
-    rc = run_wizard(tmp_path, ask=scripted(answers), say=quiet)
-    assert rc == 0
-
-    config = load_config(tmp_path / "config.yaml")
-    assert config.environment.current == "seaside_cottage"
-    assert config.environment.weather is False
-    assert [loc.key for loc in config.environment.locations] == [
-        "hillside_cabin", "city_loft", "seaside_cottage",
-    ]

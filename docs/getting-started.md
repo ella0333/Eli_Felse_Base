@@ -102,8 +102,12 @@ The wizard walks you through everything:
 - **Spend cap:** for paid APIs, a daily token budget (mandatory). For local models,
   optional.
 - **Sleeping:** whether the agent sleeps at all (it makes zero API calls overnight),
-  whether it keeps a fixed bedtime, and whether it picks its own wake time each night
-  or always wakes at the same hour. Saying no to sleeping skips the rest.
+  whether it picks its own bedtime or keeps one you set, and whether it picks its own
+  wake time each night or always wakes at the same hour. Saying no to sleeping skips
+  the other two.
+- **Weather:** whether each place carries its real conditions, from Open-Meteo. Where
+  the agent lives is not asked: it ships with three places and chooses between them
+  itself, on its first run, before it ever reaches the main menu.
 - **Character:** name, pronouns, personality, backstory for your AI persona
 
 When it's done, it writes `config.yaml` and `persona.yaml`, then runs a quick connection

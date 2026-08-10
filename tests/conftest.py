@@ -21,6 +21,11 @@ def config(tmp_path):
     # at 23:00 must not fall into the bedtime flow. Day-cycle tests use a
     # fake clock and enable it explicitly.
     cfg.day_cycle.enabled = False
+    # Environment ships with three real places now. Pin one so tests don't
+    # spend a provider call on the first-run "where do you want to live?"
+    # ask, and keep weather off so nothing reaches out to Open-Meteo.
+    cfg.environment.current = "hillside_cabin"
+    cfg.environment.weather = False
     return cfg
 
 

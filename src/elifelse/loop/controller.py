@@ -37,6 +37,16 @@ class Controller:
         self.note = initial_note
         menu_failures = 0
 
+        # 0. first run only: the agent decides where it lives before anything
+        # else. Restoring a save or a crash context sets the place already, so
+        # this is asked once in the agent's life, not once per boot.
+        if app.environment is not None and not app.environment.chosen:
+            print_system("environment: asking where it wants to be")
+            opening = await app.environment.select(
+                app, "You're settling in. Where do you want to live?"
+            )
+            self.note = "\n".join(filter(None, [self.note, opening]))
+
         while max_iterations is None or self.iterations_run < max_iterations:
             self.iterations_run += 1
 

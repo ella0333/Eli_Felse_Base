@@ -30,18 +30,6 @@ class EnvironmentActivity(Activity):
         return f"currently: {env.current.name}" if env is not None else ""
 
     async def run(self, ctx: ActivityContext) -> str:
-        env = ctx.app.environment
-        labels = []
-        for key, loc in env.locations.items():
-            here = " (you are here)" if key == env.current_key else ""
-            labels.append(f"{loc.name}{here} — {loc.description}")
-
-        choice = await ctx.choose(
-            "Where would you like to be?", list(env.locations), labels=labels
-        )
-        if choice == env.current_key:
-            return f"You looked around, but decided to stay at {env.current.name}."
-
-        env.set_current(choice)
-        await env.refresh()  # new place, fetch its weather
-        return f"You moved to {env.current.name}."
+        # Same routine the first run uses to ask where it wants to be, so a
+        # move mid-day and the opening choice read and behave identically.
+        return await ctx.app.environment.select(ctx.app, "Where would you like to be?")

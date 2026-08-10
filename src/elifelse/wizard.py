@@ -26,7 +26,6 @@ import yaml
 from elifelse.config import (
     Config,
     EnvironmentConfig,
-    EnvironmentLocation,
     ProviderConfig,
 )
 from elifelse.persona import Persona
@@ -390,44 +389,13 @@ async def _probe_api(config: Config) -> dict[str, Any]:
     return result
 
 
-# The set config.example.yaml ships. Three places, far enough apart that the
-# weather is visibly different in each, which is the point of the feature.
-_DEFAULT_LOCATIONS = [
-    EnvironmentLocation(
-        key="hillside_cabin",
-        name="Hillside Cabin",
-        description=(
-            "A small wooden cabin on a quiet hillside, with a desk by the window."
-        ),
-        latitude=44.05,
-        longitude=-71.68,
-    ),
-    EnvironmentLocation(
-        key="city_loft",
-        name="City Loft",
-        description="A bright loft apartment above a busy street, plants on the sill.",
-        latitude=40.71,
-        longitude=-74.01,
-    ),
-    EnvironmentLocation(
-        key="seaside_cottage",
-        name="Seaside Cottage",
-        description="A weathered cottage near the shore; you can hear gulls outside.",
-        latitude=43.66,
-        longitude=-70.25,
-    ),
-]
-
-
 def _ask_sleep(io: WizardIO, config: Config) -> None:
-    """Whether the agent sleeps, and on whose terms.
+    """Whether the agent sleeps, and who decides when.
 
-    Three questions that collapse into one when the answer to the first is no,
-    so an always-on agent is not walked through a schedule it will never keep.
-    The bedtime question is asked separately from sleeping itself, and defaults
-    to no, because a fixed bedtime turns out to be the expensive option: it is
-    in front of the agent all evening and it plays out the wind-down for hours
-    before the hour arrives.
+    Three yes/no questions with the same shape, and the last two are skipped
+    when the answer to the first is no, so an always-on agent is not walked
+    through a schedule it will never keep. Both default to letting the agent
+    decide, because a time it was told is a time it counts down to.
     """
     dc = config.day_cycle
 
@@ -440,60 +408,43 @@ def _ask_sleep(io: WizardIO, config: Config) -> None:
         return
 
     io.say("")
-    io.say("A fixed bedtime gives it something to count down to, and it starts")
-    io.say("winding down hours early instead of doing anything else. Without one,")
-    io.say("'Take a nap' becomes 'Go to bed' at 9:00 PM and it turns in when it's")
-    io.say("ready. Change that hour with day_cycle.night_start in config.yaml.")
-    if io.yesno("Set a fixed bedtime anyway?", default=False):
+    io.say("If it picks, 'Take a nap' turns into 'Go to bed' at 9:00 PM and it")
+    io.say("goes when it wants. A bedtime you set gives it something to count")
+    io.say("down to, so it starts winding down hours early.")
+    if io.yesno("Let the agent pick its own bedtime?", default=True):
+        io.say("change that 9:00 PM with day_cycle.night_start in config.yaml")
+    else:
         dc.bedtime = io.hhmm("Bedtime", default="22:00")
 
     io.say("")
-    io.say("It can pick its own wake time each night, off a menu of hours, or you")
-    io.say("can hold it to the same hour every day.")
-    dc.wake_mode = io.choice(
-        "How does it wake up?",
-        [("alarm", "It sets its own alarm each night"),
-         ("fixed", "The same time every day")],
-        default="alarm",
-    )
-    if dc.wake_mode == "fixed":
-        dc.wake_time = io.hhmm("Wake time", default="08:00")
+    io.say("Same question for the morning: it can set an alarm each night on its")
+    io.say("way to bed, or wake at the same time every day.")
+    if io.yesno("Let the agent pick its own wake time?", default=True):
+        dc.wake_mode = "alarm"
+        io.say("it picks between 4 AM and 11 AM; change that with")
+        io.say("day_cycle.alarm_hours in config.yaml")
     else:
-        io.say("edit day_cycle.alarm_hours in config.yaml to change which hours")
-        io.say("it can choose from (4 AM to 11 AM by default)")
+        dc.wake_mode = "fixed"
+        dc.wake_time = io.hhmm("Wake time", default="08:00")
 
 
 def _ask_environment(io: WizardIO) -> EnvironmentConfig:
-    """Somewhere for the agent to be.
+    """Live weather, and nothing else.
 
-    Worth asking rather than defaulting silently: the activity hides itself
-    when there is nowhere to go, so a config written without locations quietly
-    has one fewer activity than the summary at the end of setup claims.
+    Where the agent lives is not asked. It is a built-in activity with default
+    places, and which one it starts in is the agent's own first decision, made
+    on its first run. That leaves one genuine question here, because weather is
+    the only part that calls out to another service.
     """
     env = EnvironmentConfig()
 
     io.say("")
-    io.say("The agent lives somewhere, and can move between places. Where it is")
-    io.say("colors what it writes and how it feels, and each place has its own")
-    io.say("real weather, pulled from a free service that needs no key.")
+    io.say("The agent lives somewhere, and it picks where on its first run: a")
+    io.say("hillside cabin, a city loft or a seaside cottage. Where it is goes")
+    io.say("into its prompt and colors what it writes and how it feels.")
     io.say("")
-    io.say("The three suggested places are a hillside cabin, a city loft and a")
-    io.say("seaside cottage.")
-
-    if not io.yesno("Set up somewhere for the agent to live?", default=True):
-        env.enabled = False
-        io.say("no places set, so 'Change the environment' stays off the menu")
-        io.say("add environment.locations to config.yaml later to switch it on")
-        return env
-
-    env.locations = list(_DEFAULT_LOCATIONS)
-    env.current = io.choice(
-        "Which one does it start in?",
-        [(loc.key, loc.name) for loc in _DEFAULT_LOCATIONS],
-        default=_DEFAULT_LOCATIONS[0].key,
-    )
-    io.say("")
-    io.say("Weather is looked up per place from Open-Meteo. No key, no account.")
+    io.say("Each place can carry its own real weather, looked up from Open-Meteo.")
+    io.say("No key, no account.")
     env.weather = io.yesno("Use real weather?", default=True)
     io.say("edit environment.locations in config.yaml to use places of your own")
     return env
@@ -653,16 +604,12 @@ def run_wizard(base_dir: Path | str = ".", ask: AskFn = input,
     _run_probe(config, config_path, base / ".env", io)
 
     io.say("")
-    # Environment is the only built-in that gates on something asked here.
-    # Nap looks like it should too, but the day cycle is always built, so an
-    # agent that never sleeps for the night can still nap. All the sleep
-    # answers change is what that one menu entry offers.
-    active = ["chat", "eat", "journal", "nap", "ponder"]
-    if config.environment.locations:
-        active.append("environment")
+    # Every built-in is on. Nothing asked here can switch one off any more:
+    # the day cycle is always built, so an agent that never sleeps for the
+    # night can still nap, and the environment ships with places to be. All
+    # these answers change is what those two menu entries offer.
+    active = ["chat", "eat", "environment", "journal", "nap", "ponder"]
     io.say(f"Activities on: {', '.join(sorted(active))}.")
-    if not config.environment.locations:
-        io.say("environment is off until you give it somewhere to be.")
     io.say("Turn any of them off in config.yaml under 'activities' by setting")
     io.say("that activity's 'enabled' to false. Same flag for modules you add later.")
     io.say("")
