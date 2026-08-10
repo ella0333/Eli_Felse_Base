@@ -11,7 +11,8 @@ Done once, generically (instead of copy-pasted per activity):
    b. summary system generates + stores a summary (BEFORE any restore)
    c. if the activity declares a survey: run it
    d. profile manager updates from survey results
-   e. memory system flushes extraction with the activity's declared rules
+   e. memory system flushes extraction with the activity's declared rules,
+      for every buffer the activity filled, not only its declared subject
    f. if isolated: restore the pre-activity context, then inject ONE compact
       line: "[You just finished X]\nWhat happened: {summary}"
 6. tracker records completion; the note returns to the menu
@@ -27,6 +28,41 @@ from elifelse.textutils import print_system
 if TYPE_CHECKING:
     from elifelse.activities.base import Activity
     from elifelse.app import App
+
+
+async def _flush_activity_memory(app: App, activity: Activity, subject: str) -> None:
+    """Extract everything this activity buffered, whatever it keyed it under.
+
+    `ctx.remember(subject=...)` files a message under `<key>_<subject>`, and an
+    activity that picks its subject partway through its own run cannot have
+    declared it in `get_subject()`, which is read before `run()` starts. Chat
+    knows who it is talking to up front; a module that offers a menu of people,
+    channels or save files does not.
+
+    So the subject computed above is a hint, not the whole answer. Every buffer
+    belonging to this activity is flushed: the bare key, the declared subject,
+    and anything else filed under `<key>_...` while it ran. Missing one used to
+    mean the tail of a conversation sat in the buffer until the next session
+    with the same person happened to fill a batch.
+    """
+    keys = {activity.key}
+    if subject:
+        keys.add(f"{activity.key}_{subject}")
+
+    prefix = f"{activity.key}_"
+    game = activity.memory_mode == "game_batch"
+    # push_game_message files under "game_<session key>"; strip that back off so
+    # both modes are asking about the same names.
+    for buffered in list(app.memory.buffers):
+        name = buffered[len("game_"):] if game and buffered.startswith("game_") else buffered
+        if name == activity.key or name.startswith(prefix):
+            keys.add(name)
+
+    for key in sorted(keys):
+        if game:
+            await app.memory.flush_game_remaining(key)
+        else:
+            await app.memory.flush_remaining(key)
 
 
 async def run_activity(app: App, activity: Activity, subject: str = "") -> str:
@@ -76,11 +112,7 @@ async def run_activity(app: App, activity: Activity, subject: str = "") -> str:
 
     # 5e. flush buffered memory extraction for this activity
     if app.memory is not None:
-        session_key = f"{activity.key}_{subject}" if subject else activity.key
-        if activity.memory_mode == "game_batch":
-            await app.memory.flush_game_remaining(session_key)
-        else:
-            await app.memory.flush_remaining(session_key)
+        await _flush_activity_memory(app, activity, subject)
 
     # 5f. restore + compact injection (isolated activities only)
     if activity.isolate_context:

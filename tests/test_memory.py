@@ -175,3 +175,78 @@ async def test_lifecycle_wiring_summary_then_extraction(app, mock_provider, stor
         "Wrote a journal entry about the garden."
     )
     assert await store.count("memories") == 1
+
+
+async def test_lifecycle_flushes_a_subject_chosen_during_the_run(app, mock_provider, store):
+    """An activity that picks who it is talking to partway through its own run
+    cannot declare that subject in get_subject(), which is read before run()
+    starts. Its buffer must still be flushed."""
+    from elifelse.activities.base import Activity
+    from elifelse.loop.lifecycle import run_activity
+
+    class PicksLater(Activity):
+        key = "picks_later"
+        menu_label = "Picks Later"
+
+        async def run(self, ctx):
+            ctx.remember("assistant", "I showed them the piece.", subject="Ada")
+            ctx.remember("user", "They liked it.", subject="Ada")
+            return "done"
+
+    app.memory = MemorySystem(mock_provider, store, app.config.memory, app.schemas)
+    app.registry.register(PicksLater)
+
+    mock_provider.feed({"results": [_verdict(0, memory="Ada liked the piece.")]})
+    await run_activity(app, app.registry.get("picks_later"))
+
+    assert await store.count("memories") == 1
+    assert not [k for k, v in app.memory.buffers.items() if v]
+
+
+async def test_lifecycle_flushes_a_game_subject_chosen_during_the_run(app, mock_provider, store):
+    """Same for game_batch mode, where the buffer is 'game_<key>_<subject>'."""
+    from elifelse.activities.base import Activity
+    from elifelse.loop.lifecycle import run_activity
+
+    class PicksGame(Activity):
+        key = "picks_game"
+        menu_label = "Picks Game"
+        memory_mode = "game_batch"
+
+        async def run(self, ctx):
+            ctx.remember_game("assistant", "north", subject="zork1")
+            return "done"
+
+    app.memory = MemorySystem(mock_provider, store, app.config.memory, app.schemas)
+    app.registry.register(PicksGame)
+
+    mock_provider.feed({"summary": "Went north in Zork."})
+    await run_activity(app, app.registry.get("picks_game"))
+
+    assert not [k for k, v in app.memory.buffers.items() if v]
+
+
+async def test_lifecycle_still_flushes_a_declared_subject(app, mock_provider, store):
+    """The chat case, where get_subject() names the person up front."""
+    from elifelse.activities.base import Activity
+    from elifelse.loop.lifecycle import run_activity
+
+    class Declares(Activity):
+        key = "declares"
+        menu_label = "Declares"
+
+        def get_subject(self, ctx):
+            return "Ada"
+
+        async def run(self, ctx):
+            ctx.remember("assistant", "Talked to them.", subject="Ada")
+            return "done"
+
+    app.memory = MemorySystem(mock_provider, store, app.config.memory, app.schemas)
+    app.registry.register(Declares)
+
+    mock_provider.feed({"results": [_verdict(0, memory="Talked to Ada.")]})
+    await run_activity(app, app.registry.get("declares"))
+
+    assert await store.count("memories") == 1
+    assert not [k for k, v in app.memory.buffers.items() if v]

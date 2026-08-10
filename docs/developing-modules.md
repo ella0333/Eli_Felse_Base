@@ -71,6 +71,19 @@ Plus: `ctx.recall(query)`, `ctx.remember(...)`, `ctx.config` (your config sectio
 `ctx.data_dir` (your storage folder), `ctx.channels`, `ctx.limits` (daily limits),
 `ctx.set_status(text)`.
 
+### Memory subjects
+
+`ctx.remember(role, content, subject="Ada")` files a message under that person (or
+channel, or save file) so recall can be scoped to them later with
+`ctx.recall(query, source="Ada")`.
+
+You do not have to know the subject in advance. `get_subject()` is read before `run()`
+starts, which is fine for a chat that always talks to the same person and no use to a
+module that offers a menu of people first. Pick the subject whenever you like and pass it
+to `remember()`; the lifecycle flushes every buffer your activity filled when it ends,
+not just the declared one. Override `get_subject()` when the subject is also the right
+label for summaries and surveys, not to make memory work.
+
 ### Menus are always lettered
 
 `ctx.choose` renders every sub-menu the same way the main menu is rendered, and
