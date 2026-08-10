@@ -393,34 +393,25 @@ def _ask_sleep(io: WizardIO, config: Config) -> None:
     """Whether the agent sleeps, and whether you set its hours or it does.
 
     Three yes/no questions, and the last two are skipped when the answer to
-    the first is no, so an always-on agent is not walked through a schedule it
-    will never keep. Both default to no, meaning the agent decides, because a
-    time it was told is a time it counts down to.
+    the first is no, so an agent that never sleeps is not walked through a
+    schedule it will never keep. Both times default to unset, meaning the
+    agent decides, because a time it was told is a time it counts down to.
     """
     dc = config.day_cycle
 
     io.say("")
-    io.say("The agent can sleep. It goes to bed and really sleeps, making no API")
-    io.say("calls until it wakes.")
-    dc.enabled = io.yesno("Let the agent sleep?", default=True)
+    dc.enabled = io.yesno("Do you want your agent to go to sleep at night?", default=True)
     if not dc.enabled:
-        io.say("it runs straight through instead. Naps still work.")
         return
 
-    io.say("")
-    if io.yesno(
-        "Do you want to give it a set bedtime? If not, the model will choose "
-        "on its own.", default=False,
-    ):
-        dc.bedtime = io.hhmm("Bedtime", default="22:00")
+    if io.yesno("Do you want to set a bed time? If not set, the agent will choose.",
+                default=False):
+        dc.bedtime = io.hhmm("Bed time", default="22:00")
 
-    io.say("")
-    if io.yesno(
-        "Do you want to give it a set wake time? If not, the model will choose "
-        "on its own.", default=False,
-    ):
+    if io.yesno("Do you want to set a wake up time? If not set, the agent will choose.",
+                default=False):
         dc.wake_mode = "fixed"
-        dc.wake_time = io.hhmm("Wake time", default="08:00")
+        dc.wake_time = io.hhmm("Wake up time", default="08:00")
     else:
         dc.wake_mode = "alarm"
 
@@ -431,17 +422,17 @@ def _ask_environment(io: WizardIO) -> EnvironmentConfig:
     Which environment the agent is in is not asked. It is a built-in activity
     with default environments, and which one it starts in is the agent's own
     first decision, made on its first run and changeable after. That leaves
-    one real question here, because weather is the only part of it that calls
-    out to another service.
+    one real question, because weather is the only part of this that calls out
+    to another service. Everything else about environments is documented in
+    config.example.yaml, which is where someone changing them will be looking.
     """
     env = EnvironmentConfig()
 
     io.say("")
-    io.say("The agent picks its own environment on its first run: a hillside")
-    io.say("cabin, a city loft or a seaside cottage. It can change later.")
-    io.say("Each one can carry its real weather, from Open-Meteo. No key needed.")
-    env.weather = io.yesno("Use real weather?", default=True)
-    io.say("edit environment.locations in config.yaml to use places of your own")
+    env.weather = io.yesno(
+        "Do you want your agent to have real weather? It's free, no account needed.",
+        default=True,
+    )
     return env
 
 
