@@ -267,6 +267,26 @@ async def test_go_to_bed_skips_the_duration_menu(config, persona):
     assert "how long do you want to nap" not in str(provider.calls[0]["messages"]).lower()
 
 
+async def test_go_to_bed_from_the_duration_menu_also_asks_the_alarm(config, persona):
+    """Both routes to bed run the same night, so both pick a wake hour."""
+    config.day_cycle.enabled = True  # default: no bedtime, alarm wake
+    app, provider, fake = await _nap_app(config, persona, datetime(2026, 7, 3, 14, 0))
+    activity = app.registry.get("nap")
+    provider.feed(
+        {"thinking": "done for today", "choice": "D"},  # D = go to bed for the night
+        {"thinking": "early start", "choice": "B"},     # the alarm menu, 5 AM
+    )
+
+    note = await activity.run(app.registry.ctx_for(activity))
+    assert "brand new day" in note
+    assert sum(fake.sleeps) == 15 * 3600  # 14:00 -> 05:00
+
+    duration_menu, alarm_menu = (str(c["messages"]) for c in provider.calls)
+    assert "D) Go to bed for the night" in duration_menu
+    assert "What time do you want to wake up?" in alarm_menu
+    assert "B) 5:00 AM (15 hours of sleep)" in alarm_menu
+
+
 async def test_nap_durations_that_run_into_the_night_are_hidden(config, persona):
     """With no bedtime, night_start is the edge a nap must not cross."""
     config.day_cycle.enabled = True  # night_start 21:00
