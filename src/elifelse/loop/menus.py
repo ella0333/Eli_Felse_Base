@@ -88,11 +88,19 @@ def build_main_menu(
     note: str = "",
     now: datetime | None = None,
     notifications: str = "",
+    blocked_key: str = "",
+    blocked_note: str = "",
 ) -> Menu:
     """Assemble the menu text and the letter->activity mapping.
 
     The letters list IS the choice enum: whatever the model answers, only these
     exact letters can ever come back from the provider.
+
+    `blocked_key` is the activity picked last turn. Its line still shows, with
+    `blocked_note` saying why it is off the table, but its letter is left out
+    of the enum so the model cannot pick it again. Showing the line and the
+    reason is the point: an option that silently vanished would read as the
+    activity breaking. Never applied when it would leave nothing to choose.
     """
     now = now or datetime.now()
     letters: list[str] = []
@@ -106,11 +114,18 @@ def build_main_menu(
         lines.append(notifications)
         lines.append("")
 
+    if len(entries) < 2:
+        blocked_key = ""
+
     lines.append("What would you like to do next?")
     for letter, entry in zip(letters_for(len(entries)), entries, strict=True):
+        status = f" ({entry['status']})" if entry.get("status") else ""
+        if blocked_key and entry["key"] == blocked_key:
+            note_text = blocked_note or "unavailable this turn"
+            lines.append(f"{letter}) {entry['label']}{status} ({note_text})")
+            continue
         letters.append(letter)
         mapping[letter] = entry["key"]
-        status = f" ({entry['status']})" if entry.get("status") else ""
         lines.append(f"{letter}) {entry['label']}{status}")
 
     lines.append("")

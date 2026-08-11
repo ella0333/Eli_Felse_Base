@@ -46,6 +46,13 @@ class ChatActivity(Activity):
         # `enabled: false` is handled by the registry, for every activity.
         return "terminal" in ctx.channels
 
+    def allow_repeat(self, ctx: ActivityContext) -> bool:
+        """Chatting again straight away is fine when they are still talking.
+        Someone who messages the moment a chat ends must never find the reply
+        option missing, which is what the one turn menu block would do."""
+        channel = ctx.channels.get("terminal")
+        return bool(channel and channel.unread_count())
+
     def get_status(self, ctx: ActivityContext) -> str:
         channel = ctx.channels.get("terminal")
         unread = channel.unread_count() if channel else 0

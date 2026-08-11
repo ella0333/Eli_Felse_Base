@@ -5,7 +5,7 @@ option values stay on the Python side."""
 import pytest
 
 from elifelse.activities.base import Activity
-from elifelse.loop.menus import build_choice_menu, letters_for
+from elifelse.loop.menus import build_choice_menu, build_main_menu, letters_for
 from elifelse.providers.base import GenerationError
 
 
@@ -44,6 +44,35 @@ def test_choice_menu_defaults_labels_to_options():
 def test_choice_menu_rejects_mismatched_labels():
     with pytest.raises(ValueError):
         build_choice_menu("Pick one", options=["a", "b"], labels=["only one"])
+
+
+# ~~~ the one-turn repeat block ~~~
+_ENTRIES = [
+    {"key": "journal", "label": "Write in your journal", "status": "last: 2 hours ago"},
+    {"key": "ponder", "label": "Sit and think for a while", "status": ""},
+]
+
+
+def test_blocked_entry_keeps_its_line_but_leaves_the_enum():
+    menu = build_main_menu(_ENTRIES, blocked_key="journal", blocked_note="you just did this")
+    assert "A) Write in your journal (last: 2 hours ago) (you just did this)" in menu.text
+    assert menu.letters == ["B"]
+    assert menu.mapping == {"B": "ponder"}
+
+
+def test_letters_do_not_shift_when_an_entry_is_blocked():
+    """Ponder is B on both menus. A blocked entry that renumbered the rest
+    would move every option the agent just read."""
+    assert "B) Sit and think for a while" in build_main_menu(_ENTRIES).text
+    assert "B) Sit and think for a while" in build_main_menu(
+        _ENTRIES, blocked_key="journal"
+    ).text
+
+
+def test_the_only_activity_is_never_blocked():
+    menu = build_main_menu(_ENTRIES[:1], blocked_key="journal")
+    assert menu.letters == ["A"]
+    assert menu.mapping == {"A": "journal"}
 
 
 # ~~~ ctx.choose ~~~

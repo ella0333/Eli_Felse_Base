@@ -77,6 +77,7 @@ recommendations, requirements, and configuration.
 - **Memory:** vector recall and automatic fact consolidation
 - **Day/night cycle:** sleeps on schedule, zero API calls overnight
 - **Built-in activities:** journal, chat, eat, nap, ponder, environment
+- **No menu loops:** whatever it just did is held back for one turn, so the day moves on
 - **Saves and recovery:** named saves, crash recovery, nightly backups
 - **Cost controls:** daily token budgets, auto-sleep when the cap is hit
 - **Response pacing:** configurable delays between replies (helps GPU rest when running locally)

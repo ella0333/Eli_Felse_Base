@@ -34,10 +34,19 @@ class PonderActivity(Activity):
         base = ctx.app.base_prompt()
 
         ponder_block = (
-            "You are sitting somewhere comfortable to just think for a while. "
-            "Reflect honestly \u2014 how things are going, what you want, what "
-            "matters to you, what you'd like to change. Don't repeat thoughts "
-            "from earlier in this session."
+            "You are taking some time to think, reflecting on your future, your "
+            "experiences, and what matters to you. Things you might turn over:\n"
+            "- What do you want to achieve or experience?\n"
+            "- What matters to you right now?\n"
+            "- Are there friendships you want to deepen, things you want to "
+            "learn, things you want to finish?\n"
+            "- What would make your days feel more meaningful?\n\n"
+            "Be honest and genuine. Think about what you actually want, not "
+            "what seems like the right answer. There is nothing you have to "
+            "arrive at here, and no one is reading over your shoulder.\n\n"
+            "If you have already shared thoughts in this session, visible above "
+            "in the conversation, let each round go somewhere new or somewhere "
+            "deeper rather than restating what you have already said."
         )
 
         try:
@@ -77,7 +86,12 @@ class PonderActivity(Activity):
         if memories:
             memory_block = "Threads you've pulled on before:\n- " + "\n- ".join(memories) + "\n\n"
 
-        prompt = f"{memory_block}What's on your mind?"
+        opening = (
+            "Take some time to reflect on your life, your future, and what "
+            "matters to you. Think about your experiences and what you want "
+            "going forward."
+        )
+        prompt = f"{memory_block}{opening}"
 
         rounds = 0
         for _ in range(MAX_ROUNDS):
@@ -87,6 +101,11 @@ class PonderActivity(Activity):
             ctx.remember("assistant", thought)
             if done:
                 break
-            prompt = "Keep going \u2014 follow that thread deeper, or let your mind drift somewhere new."
+            prompt = (
+                "Continue pondering if you'd like. Reflect further on what's on "
+                "your mind, dig deeper, or explore a new thread. Set "
+                "return_to_menu when you've thought enough and want to do "
+                "something else."
+            )
 
         return f"You spent a while lost in thought ({rounds} round{'s' if rounds != 1 else ''})."

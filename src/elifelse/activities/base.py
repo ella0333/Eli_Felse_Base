@@ -56,6 +56,21 @@ class Activity(ABC):
         """Hide from the menu when False (e.g. daily limit exhausted)."""
         return True
 
+    def allow_repeat(self, ctx: ActivityContext) -> bool:
+        """True when this activity may be picked twice in a row.
+
+        The main menu drops whatever was picked last turn from the answer enum
+        for one turn, which is what stops a model from choosing the same thing
+        forever. Override and return True for the turns where that would be
+        wrong: something is genuinely waiting (unread messages), or the
+        activity is the only sensible answer to the state it left behind.
+        """
+        return False
+
+    def repeat_blocked_note(self, ctx: ActivityContext) -> str:
+        """Why the entry is greyed out this turn, shown on its menu line."""
+        return "unavailable, you just left this activity, pick something else"
+
     async def startup(self, ctx: ActivityContext) -> None:
         """Optional service init (logins, bridges, checks) at app startup."""
         return None

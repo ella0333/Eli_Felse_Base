@@ -5,15 +5,16 @@ Each iteration:
 2. budget check — over the daily token cap, the agent auto-sleeps until reset
 3. pause/stop control check (graceful shutdown path)
 4. scheduler interrupts (bedtime menu, module pre-menu hooks)
-5. build the main menu dynamically from every installed activity
-6. send it with a menu schema whose enum is exactly the visible letters
+5. build the main menu dynamically from every installed activity, with whatever
+   was picked last turn held back so the agent cannot loop on one activity
+6. send it with a menu schema whose enum is exactly the selectable letters
 7. dispatch the validated choice through the registry + shared lifecycle
 8. the activity's note is shown at the top of the next menu
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from elifelse.loop.lifecycle import run_activity
 from elifelse.loop.menus import build_main_menu
@@ -31,6 +32,8 @@ class Controller:
         self.app = app
         self.note = ""
         self.iterations_run = 0
+        # The activity picked last turn, held back from the next menu.
+        self.last_choice_key = ""
 
     async def main_loop(self, max_iterations: int | None = None, initial_note: str = "") -> None:
         app = self.app
@@ -75,8 +78,14 @@ class Controller:
             if not entries:
                 print_system("No activities available; nothing to do. Exiting loop.")
                 return
+            blocked_key, blocked_note = self._repeat_block(entries)
             menu = build_main_menu(
-                entries, note=self.note, now=app.clock(), notifications=app.notification_line()
+                entries,
+                note=self.note,
+                now=app.clock(),
+                notifications=app.notification_line(),
+                blocked_key=blocked_key,
+                blocked_note=blocked_note,
             )
             self.note = ""
 
@@ -108,10 +117,33 @@ class Controller:
             # back as the thing that was actually on the menu.
             label = activity.get_menu_label(app.registry.ctx_for(activity))
             print(f"Choice: {choice_letter} — {label}")
+            self.last_choice_key = activity.key
             self.note = await run_activity(app, activity)
 
         # loop budget reached (only used with --max-iterations)
         clear_crash_context(app)
+
+    def _repeat_block(self, entries: list[dict[str, Any]]) -> tuple[str, str]:
+        """Which activity is held back this turn, and the reason to show.
+
+        Whatever was picked last turn, unless it says otherwise. Every module
+        gets this for free, including ones installed later: the rule lives on
+        the menu, not in any activity, and an activity only ever opts a single
+        turn out of it through allow_repeat().
+        """
+        key = self.last_choice_key
+        if not key or not any(entry["key"] == key for entry in entries):
+            return "", ""
+        try:
+            activity = self.app.registry.get(key)
+            ctx = self.app.registry.ctx_for(activity)
+            if activity.allow_repeat(ctx):
+                return "", ""
+            return key, activity.repeat_blocked_note(ctx)
+        except Exception as e:
+            # A module that raises here loses the block, never the menu.
+            print_system(f"activity '{key}' repeat check failed: {e}")
+            return "", ""
 
     async def _budget_sleep(self) -> None:
         app = self.app

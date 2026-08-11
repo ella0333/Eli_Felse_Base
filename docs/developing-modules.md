@@ -34,6 +34,9 @@ class Tarot(Activity):
     def available(self, ctx) -> bool:
         return True              # False hides it from the menu entirely
 
+    def allow_repeat(self, ctx) -> bool:
+        return False             # True lets it be picked twice in a row
+
     async def run(self, ctx) -> str:
         card = draw_random_card()                      # plain Python
         reaction = await ctx.freetext(f"You drew {card}. How does it strike you?")
@@ -45,6 +48,29 @@ unless you have something better to say**. The default is the base's
 "last: 2 hours ago", which is what the agent actually needs to pace itself.
 Override it for live state ("3 unread messages", "currently: The Garden") and fall
 back to `super().get_status(ctx)` when there's nothing live to report.
+
+## You get the anti-loop rule for free
+
+A model left alone with a menu will happily pick the same option forever. The
+main menu stops that: whatever was picked last turn is left out of the answer
+enum for one turn. The line still shows, with a note saying why it is off the
+table, so the agent sees a reason rather than an option that vanished. This
+applies to your activity the moment it is installed. There is nothing to wire up.
+
+Override `allow_repeat()` for the turns where being pickable twice in a row
+actually matters, usually because something is waiting:
+
+```python
+def allow_repeat(self, ctx) -> bool:
+    return bool(ctx.channels["discord"].unread_count())   # they're still talking
+
+def repeat_blocked_note(self, ctx) -> str:
+    return "unavailable, you just read your messages"     # optional, has a default
+```
+
+It is checked per turn against live state, not once at load, so returning True
+is an exemption for this menu rather than an opt-out from the rule. Keep it
+narrow. An activity that always returns True is one the agent can get stuck in.
 
 ## The ctx API
 
