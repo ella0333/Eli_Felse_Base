@@ -31,6 +31,35 @@ MAX_GENERATE_ATTEMPTS = 5
 # Which parsed field becomes the assistant turn stored in context.
 _CONTEXT_CONTENT_KEYS = ("response", "command", "entry", "note")
 
+# Failures that mean "not right now" rather than "not ever": rate limits, an
+# overloaded or restarting backend, a dropped connection. Anything else (a bad
+# key, an unknown model, a rejected schema) is returned to the caller straight
+# away, because waiting cannot fix it.
+_TRANSIENT_MARKERS = (
+    "429",
+    "500:",
+    "502",
+    "503",
+    "504",
+    "connection_error",
+    "timeout",
+    "timed out",
+    "rate limit",
+    "rate-limited",
+    "ratelimit",
+    "overloaded",
+    "capacity",
+    "temporarily",
+    "try again",
+    "retry shortly",
+)
+
+
+def is_transient_error(error: str) -> bool:
+    """True when waiting a moment is worth doing before giving up."""
+    lowered = (error or "").lower()
+    return any(marker in lowered for marker in _TRANSIENT_MARKERS)
+
 
 class GenerationError(Exception):
     """Raised when the model could not produce a valid response. A caller can
@@ -209,15 +238,46 @@ class Provider(ABC):
         """Background/utility call: no context, no pacing, queues behind the lock."""
         model = model_override or self.pconf.utility_model or self.pconf.model
         async with self.lock:
-            for attempt in range(max_retries):
+            waits_used = 0
+            attempt = 0
+            while attempt < max_retries:
                 result = await self._complete(messages, schema, model, raw=True)
                 self.budget.record(result.tokens)
                 if result.text is not None:
                     return result.text
-                print_system(f"raw_completion error: {result.error}")
-                if attempt < max_retries - 1:
+                error = result.error or "unknown_error"
+                # Same rule as generate(): a rate limit is waited out and
+                # doesn't count as one of the tries.
+                if await self._wait_out_transient(error, waits_used):
+                    waits_used += 1
+                    continue
+                print_system(f"raw_completion error: {error}")
+                attempt += 1
+                if attempt < max_retries:
                     await self._sleep(2)
         return None
+
+    async def _wait_out_transient(self, error: str, waits_used: int) -> bool:
+        """Sleep through a transient failure. False means don't bother.
+
+        Exponential from `transient_backoff`, capped, with jitter so a queued
+        background call and the foreground loop don't come back in lockstep and
+        rate-limit each other again.
+        """
+        limit = max(0, self.pconf.transient_retries)
+        if waits_used >= limit or not is_transient_error(error):
+            return False
+        delay = min(
+            self.pconf.transient_backoff * (2 ** waits_used),
+            self.pconf.transient_backoff_max,
+        )
+        delay += self._rand.uniform(0, delay * 0.25)
+        print_system(
+            f"Provider unavailable, waiting {int(delay)}s "
+            f"(retry {waits_used + 1}/{limit}): {error[:120]}"
+        )
+        await self._sleep(delay)
+        return True
 
     async def generate(
         self,
@@ -250,7 +310,9 @@ class Provider(ABC):
 
         model = model_override or self.pconf.model
         last_error = ""
-        for attempt in range(MAX_GENERATE_ATTEMPTS):
+        attempt = 0
+        waits_used = 0
+        while attempt < MAX_GENERATE_ATTEMPTS:
             if attempt > 0:
                 print_system(f"Retry {attempt}/{MAX_GENERATE_ATTEMPTS - 1}")
             messages = self._build_call_messages(user_input, skip_context, image_urls)
@@ -265,6 +327,13 @@ class Provider(ABC):
                 if image_urls and "image" in last_error.lower():
                     print_system("Retrying without image...")
                     image_urls = None
+                    attempt += 1
+                    continue
+                # A rate limit is the provider saying "later", not "no". Waiting
+                # it out doesn't spend a validation attempt: the model never
+                # answered, so there is nothing to hold against it.
+                if await self._wait_out_transient(last_error, waits_used):
+                    waits_used += 1
                     continue
                 print_system(f"Provider error: {last_error}")
                 return {"error": last_error}
@@ -276,6 +345,7 @@ class Provider(ABC):
                     f"Response rejected ({last_error}), attempt "
                     f"{attempt + 1}/{MAX_GENERATE_ATTEMPTS}, regenerating..."
                 )
+                attempt += 1
                 continue
 
             parsed = validation.parsed

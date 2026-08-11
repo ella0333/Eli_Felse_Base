@@ -46,6 +46,11 @@ class ProviderConfig(BaseModel):
     response_delay_min: int = 1
     response_delay_max: int = 40
     daily_token_budget: int = 0  # 0 = unlimited; auto-sleep when hit
+    # Transient failures (rate limits, provider hiccups, dropped connections)
+    # are waited out rather than passed to the activity. 0 retries = off.
+    transient_retries: int = 5
+    transient_backoff: float = 5.0   # seconds before the first retry, doubling
+    transient_backoff_max: float = 120.0
     lmstudio_loader: bool = False
     quirks: ProviderQuirks = Field(default_factory=ProviderQuirks)
 

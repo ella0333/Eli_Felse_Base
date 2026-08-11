@@ -5,7 +5,8 @@ activity flow (menus, schemas, isolation, summaries) in seconds with no model
 loaded and no API cost.
 
 Two modes, combinable:
-- a script: a list of responses played back in order (dicts are JSON-encoded);
+- a script: a list of responses played back in order (dicts are JSON-encoded,
+  and a CompletionResult is returned as-is so failures can be scripted too);
 - auto mode (script exhausted or absent): synthesize a schema-valid response,
   picking `always_option` (0-based) from any enum field.
 """
@@ -23,12 +24,12 @@ class MockProvider(Provider):
     def __init__(
         self,
         config: Config,
-        script: list[dict[str, Any] | str] | None = None,
+        script: list[dict[str, Any] | str | CompletionResult] | None = None,
         always_option: int = 0,
         auto_fields: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(config)
-        self.script: list[dict[str, Any] | str] = list(script or [])
+        self.script: list[dict[str, Any] | str | CompletionResult] = list(script or [])
         self.always_option = always_option
         self.auto_fields = auto_fields or {}
         self.calls: list[dict[str, Any]] = []  # for test assertions
@@ -39,7 +40,7 @@ class MockProvider(Provider):
 
         self._sleep = _no_sleep
 
-    def feed(self, *responses: dict[str, Any] | str) -> None:
+    def feed(self, *responses: dict[str, Any] | str | CompletionResult) -> None:
         """Append more scripted responses."""
         self.script.extend(responses)
 
@@ -53,6 +54,11 @@ class MockProvider(Provider):
         self.calls.append({"messages": messages, "schema": schema, "model": model, "raw": raw})
         if self.script:
             item = self.script.pop(0)
+            # A scripted CompletionResult goes back untouched, which is how a
+            # test scripts a failure (a rate limit, a dead connection) rather
+            # than a response.
+            if isinstance(item, CompletionResult):
+                return item
             text = json.dumps(item) if isinstance(item, dict) else item
             return CompletionResult(text=text, tokens=max(1, len(text) // 4))
         text = json.dumps(self._auto_response(schema)) if schema else "Mock response."

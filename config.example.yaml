@@ -26,6 +26,13 @@ provider:
   # NEVER leave 0 on a paid API unless you truly mean it — when the cap is hit the
   # agent auto-sleeps until the daily reset.
   daily_token_budget: 0
+  # Transient failures (a 429 rate limit, an overloaded backend, a dropped
+  # connection) are waited out instead of ending whatever the agent was doing.
+  # The wait doubles each time, so 5 / 5.0 waits roughly 5, 10, 20, 40, 80
+  # seconds before giving up. Set transient_retries to 0 to fail immediately.
+  transient_retries: 5
+  transient_backoff: 5.0       # seconds before the first retry
+  transient_backoff_max: 120.0 # ceiling for a single wait
   # Optional LM Studio add-on: auto-load the model via the `lms` CLI with the right
   # context length. Only used when the `lms` command exists.
   lmstudio_loader: false

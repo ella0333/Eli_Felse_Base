@@ -3,6 +3,7 @@
 import json
 from datetime import datetime, timedelta
 
+from elifelse.providers.base import CompletionResult
 from elifelse.providers.budget import TokenBudget
 from elifelse.providers.mock import MockProvider
 from elifelse.structured.registry import menu_schema
@@ -37,6 +38,94 @@ async def test_always_invalid_returns_error_never_bad_value(config):
     assert "error" in result
     assert "choice" not in result  # the bad value never reaches the caller
     assert len(p.calls) == 5  # exactly 5 attempts
+
+
+# ~~~ transient failures ~~~
+RATE_LIMITED = '429: {"error":{"message":"temporarily rate-limited upstream"}}'
+
+
+def _waiting_provider(config, script):
+    """A mock that records what it was asked to sleep for instead of sleeping."""
+    p = MockProvider(config, script=script)
+    waits: list[float] = []
+
+    async def _record(seconds: float) -> None:
+        waits.append(seconds)
+
+    p._sleep = _record
+    return p, waits
+
+
+async def test_rate_limit_is_waited_out_and_the_call_succeeds(config):
+    p, waits = _waiting_provider(
+        config,
+        [
+            CompletionResult(text=None, error=RATE_LIMITED),
+            CompletionResult(text=None, error="connection_error: server disconnected"),
+            {"thinking": "finally", "choice": "A"},
+        ],
+    )
+    result = await p.generate("pick", schema=MENU, skip_delay=True)
+    assert result["choice"] == "A"
+    # Backoff doubles: roughly 5s then 10s, plus jitter.
+    assert len(waits) == 2
+    assert 5 <= waits[0] < 6.5
+    assert 10 <= waits[1] < 13
+
+
+async def test_waiting_out_a_rate_limit_does_not_spend_a_validation_attempt(config):
+    """The model never answered, so there's nothing to hold against it: all
+    five attempts are still there once the provider comes back."""
+    p, _ = _waiting_provider(
+        config,
+        [CompletionResult(text=None, error=RATE_LIMITED)] * 3
+        + [json.dumps({"thinking": "t", "choice": "ESCAPE"})] * 5,
+    )
+    result = await p.generate("pick", schema=MENU, skip_delay=True)
+    assert "error" in result
+    assert len(p.calls) == 8  # 3 waited out + 5 real attempts
+
+
+async def test_a_permanent_error_is_not_retried(config):
+    """Waiting can't fix a bad key, so the caller hears about it immediately."""
+    p, waits = _waiting_provider(
+        config,
+        [CompletionResult(text=None, error="401: invalid api key")]
+        + [{"thinking": "t", "choice": "A"}],
+    )
+    result = await p.generate("pick", schema=MENU, skip_delay=True)
+    assert result["error"].startswith("401")
+    assert waits == []
+    assert len(p.calls) == 1
+
+
+async def test_retries_give_up_and_report_the_error(config):
+    config.provider.transient_retries = 2
+    p, waits = _waiting_provider(
+        config, [CompletionResult(text=None, error=RATE_LIMITED)] * 5
+    )
+    result = await p.generate("pick", schema=MENU, skip_delay=True)
+    assert "429" in result["error"]
+    assert len(waits) == 2  # capped by transient_retries
+    assert len(p.calls) == 3
+
+
+async def test_transient_retries_can_be_turned_off(config):
+    config.provider.transient_retries = 0
+    p, waits = _waiting_provider(
+        config, [CompletionResult(text=None, error=RATE_LIMITED)]
+    )
+    assert "error" in await p.generate("pick", schema=MENU, skip_delay=True)
+    assert waits == []
+
+
+async def test_background_calls_wait_out_rate_limits_too(config):
+    p, waits = _waiting_provider(
+        config,
+        [CompletionResult(text=None, error=RATE_LIMITED), "a summary"],
+    )
+    assert await p.raw_completion([{"role": "user", "content": "summarize"}]) == "a summary"
+    assert len(waits) == 1
 
 
 async def test_auto_mode_picks_option(config):

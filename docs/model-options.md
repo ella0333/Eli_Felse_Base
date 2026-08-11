@@ -83,6 +83,9 @@ provider:
   max_context_tokens: 36000        # must not exceed your server's configured limit
   request_timeout: 300             # seconds before a request times out
   daily_token_budget: 0            # 0 = unlimited; set this on paid APIs
+  transient_retries: 5             # how many times to wait out a rate limit
+  transient_backoff: 5.0           # seconds before the first retry, doubling
+  transient_backoff_max: 120.0     # ceiling for a single wait
   lmstudio_loader: false           # auto-load via the lms CLI (LM Studio only)
 ```
 
@@ -112,6 +115,14 @@ so a fast small model works well. Leave empty to use the main model for everythi
 **max_context_tokens:** The framework hard-limits every prompt to this many tokens. It
 must be at or below what your model server is actually configured for. If it's higher, the
 server will silently truncate and quality drops. When in doubt, use a lower number.
+
+**transient_retries:** Free and busy endpoints hand out `429 rate-limited` and
+`503 overloaded` regularly, and a local server dropping a connection looks much the
+same. Rather than ending whatever the agent was in the middle of, the framework waits
+and asks again: 5 seconds, then 10, 20, 40, 80, up to `transient_backoff_max` per wait.
+Waiting does not use up one of the five response attempts, since the model never
+answered. Errors that waiting cannot fix, a bad key or an unknown model, still come
+back immediately. Set `transient_retries: 0` to turn the waiting off.
 
 **daily_token_budget:** Total tokens (all calls, including background work) allowed per
 day. When the budget is hit, the agent auto-sleeps until the daily reset. **Never leave
