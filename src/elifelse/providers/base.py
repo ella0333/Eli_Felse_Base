@@ -198,6 +198,10 @@ class Provider(ABC):
         )
         self.budget = budget if budget is not None else TokenBudget(self.pconf.daily_token_budget)
         self.lock = asyncio.Lock()
+        # How many calls in a row have given up on a transient failure. Drives
+        # the wait before the next one, so a provider that is down stalls the
+        # agent instead of being hammered by every call that follows.
+        self.transient_failures = 0
         # Injectable for tests / instant mode.
         self._sleep = asyncio.sleep
         self._rand = random.Random()
@@ -237,6 +241,9 @@ class Provider(ABC):
     ) -> str | None:
         """Background/utility call: no context, no pacing, queues behind the lock."""
         model = model_override or self.pconf.utility_model or self.pconf.model
+        # Outside the lock: a wait held under it would block the foreground loop.
+        await self._wait_if_down()
+        last_error = ""
         async with self.lock:
             waits_used = 0
             attempt = 0
@@ -244,18 +251,56 @@ class Provider(ABC):
                 result = await self._complete(messages, schema, model, raw=True)
                 self.budget.record(result.tokens)
                 if result.text is not None:
+                    self.transient_failures = 0
                     return result.text
-                error = result.error or "unknown_error"
+                last_error = result.error or "unknown_error"
                 # Same rule as generate(): a rate limit is waited out and
                 # doesn't count as one of the tries.
-                if await self._wait_out_transient(error, waits_used):
+                if await self._wait_out_transient(last_error, waits_used):
                     waits_used += 1
                     continue
-                print_system(f"raw_completion error: {error}")
+                print_system(f"raw_completion error: {last_error}")
                 attempt += 1
                 if attempt < max_retries:
                     await self._sleep(2)
+        self._record_outcome(last_error)
         return None
+
+    def _record_outcome(self, error: str) -> None:
+        """Track consecutive give-ups so the next call knows to hold back."""
+        if is_transient_error(error):
+            self.transient_failures += 1
+        else:
+            self.transient_failures = 0
+
+    def _backoff_delay(self, step: int) -> float:
+        """Exponential from `transient_backoff`, capped, with jitter so a queued
+        background call and the foreground loop don't come back in lockstep and
+        rate-limit each other again."""
+        delay = min(
+            self.pconf.transient_backoff * (2 ** max(0, step)),
+            self.pconf.transient_backoff_max,
+        )
+        return delay + self._rand.uniform(0, delay * 0.25)
+
+    async def _wait_if_down(self) -> None:
+        """Hold off before calling a provider that just gave up on us.
+
+        Without this the failure only moves: the activity ends, the loop asks
+        the menu, that call fails too, and the agent spins through its day at
+        full speed while the provider is unreachable. Waiting here means one
+        outage is one pause, wherever the next call comes from, and the wait
+        grows while the outage lasts.
+        """
+        if not self.transient_failures:
+            return
+        delay = self._backoff_delay(self.transient_failures - 1)
+        print_system(
+            f"Provider still down after {self.transient_failures} "
+            f"attempt{'s' if self.transient_failures != 1 else ''}; "
+            f"waiting {int(delay)}s before trying again"
+        )
+        await self._sleep(delay)
 
     async def _wait_out_transient(self, error: str, waits_used: int) -> bool:
         """Sleep through a transient failure. False means don't bother.
@@ -293,6 +338,11 @@ class Provider(ABC):
         Returns the validated parsed dict, or {"error": ...} after exhausting
         retries. An out-of-enum value can NEVER be returned.
         """
+        # A provider that just gave up gets a pause before it is asked again,
+        # whichever call comes next. Ahead of the pacing delay so the two don't
+        # stack into one long unexplained silence.
+        await self._wait_if_down()
+
         if not skip_delay:
             delay = self._rand.randint(
                 min(self.pconf.response_delay_min, self.pconf.response_delay_max),
@@ -336,7 +386,10 @@ class Provider(ABC):
                     waits_used += 1
                     continue
                 print_system(f"Provider error: {last_error}")
+                self._record_outcome(last_error)
                 return {"error": last_error}
+
+            self.transient_failures = 0  # it answered, whatever the answer was
 
             validation = parse_and_validate(result.text, schema)
             if not validation.ok:

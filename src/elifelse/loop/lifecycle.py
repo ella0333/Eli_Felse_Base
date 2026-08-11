@@ -96,9 +96,17 @@ async def run_activity(app: App, activity: Activity, subject: str = "") -> str:
     # 5a. everything this activity added to the context
     new_messages = app.provider.context.messages_since(snapshot)
 
+    # An activity cut short because the provider is unreachable must not be
+    # followed by three more calls to the same provider. The summary, the
+    # survey and the memory extraction are all skipped while it is down; the
+    # buffered messages stay buffered and are extracted next time.
+    provider_down = outcome == "no_response" and app.provider.transient_failures > 0
+    if provider_down:
+        print_system("Provider is down; skipping the summary and survey for now")
+
     # 5b. summary — BEFORE restore, while the messages still exist
     summary = None
-    if app.summaries is not None and new_messages:
+    if app.summaries is not None and new_messages and not provider_down:
         summary = await app.summaries.generate_and_store(
             activity_type=activity.key,
             subject=subject or label,
@@ -107,11 +115,11 @@ async def run_activity(app: App, activity: Activity, subject: str = "") -> str:
         )
 
     # 5c-d. survey + profile update
-    if activity.survey and app.innerlife is not None:
+    if activity.survey and app.innerlife is not None and not provider_down:
         await app.innerlife.run_survey(activity.survey, subject or label, activity.key)
 
     # 5e. flush buffered memory extraction for this activity
-    if app.memory is not None:
+    if app.memory is not None and not provider_down:
         await _flush_activity_memory(app, activity, subject)
 
     # 5f. restore + compact injection (isolated activities only)

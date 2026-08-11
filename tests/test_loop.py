@@ -7,6 +7,7 @@ import json
 import pytest
 
 from elifelse.cli import main as cli_main
+from elifelse.providers.base import CompletionResult
 
 
 async def test_scripted_loop_menu_activity_menu(app, mock_provider):
@@ -126,6 +127,41 @@ async def test_three_menu_failures_raise(app, mock_provider):
     mock_provider.feed(*["not json at all"] * 15)
     with pytest.raises(RuntimeError, match="3 times in a row"):
         await app.controller.main_loop(max_iterations=5)
+
+
+async def test_a_provider_outage_holds_the_menu_instead_of_tripping_the_breaker(
+    app, mock_provider, config
+):
+    """A rate-limited menu is the provider being away, not the model failing.
+    The loop holds and asks again rather than raising after three tries."""
+    config.provider.transient_retries = 0  # give up at once; the hold-off still applies
+    await app.startup()
+    rate_limited = CompletionResult(text=None, error="429: temporarily rate-limited upstream")
+    mock_provider.feed(
+        rate_limited,
+        rate_limited,
+        rate_limited,
+        rate_limited,
+        {"thinking": "at last", "choice": "A"},
+        {"thinking": "today...", "entry": "It came back."},
+        {"thinking": "calm", "emotion": "calm"},
+    )
+    await app.controller.main_loop(max_iterations=5)
+    assert app.stats.get("activity.journal") == 1
+
+
+async def test_a_note_survives_a_menu_the_provider_never_answered(app, mock_provider, config):
+    config.provider.transient_retries = 0
+    await app.startup()
+    mock_provider.feed(
+        CompletionResult(text=None, error="429: rate limit"),
+        {"thinking": "ok", "choice": "A"},
+        {"thinking": "today...", "entry": "Morning."},
+        {"thinking": "calm", "emotion": "calm"},
+    )
+    await app.controller.main_loop(max_iterations=2, initial_note="You just woke up.")
+    menu2 = mock_provider.calls[1]["messages"][-1]["content"]
+    assert "You just woke up." in menu2
 
 
 async def test_stop_request_exits_cleanly(app):

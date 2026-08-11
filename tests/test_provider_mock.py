@@ -128,6 +128,48 @@ async def test_background_calls_wait_out_rate_limits_too(config):
     assert len(waits) == 1
 
 
+async def test_the_next_call_waits_instead_of_charging_on(config):
+    """Giving up must not turn into a fast loop: whatever calls next pauses
+    first, and the pause grows while the outage lasts."""
+    config.provider.transient_retries = 1
+    p, waits = _waiting_provider(
+        config, [CompletionResult(text=None, error=RATE_LIMITED)] * 6
+    )
+    await p.generate("pick", schema=MENU, skip_delay=True)   # gives up
+    assert p.transient_failures == 1
+    waits.clear()
+
+    await p.generate("pick", schema=MENU, skip_delay=True)   # waits first
+    assert len(waits) == 2  # the hold-off, then the one in-call retry
+    assert waits[0] >= 5
+    assert p.transient_failures == 2
+
+    waits.clear()
+    await p.generate("pick", schema=MENU, skip_delay=True)
+    assert waits[0] >= 10  # longer each time it stays down
+
+
+async def test_the_hold_off_clears_once_the_provider_answers(config):
+    p, waits = _waiting_provider(
+        config, [{"thinking": "t", "choice": "A"}]
+    )
+    p.transient_failures = 3
+    result = await p.generate("pick", schema=MENU, skip_delay=True)
+    assert result["choice"] == "A"
+    assert len(waits) == 1  # waited once, then it worked
+    assert p.transient_failures == 0
+
+
+async def test_a_rejected_response_is_not_treated_as_an_outage(config):
+    """The model answering with nonsense means it's up, so nothing holds off."""
+    p, waits = _waiting_provider(
+        config, [json.dumps({"thinking": "t", "choice": "ESCAPE"})] * 5
+    )
+    assert "error" in await p.generate("pick", schema=MENU, skip_delay=True)
+    assert p.transient_failures == 0
+    assert waits == []
+
+
 async def test_auto_mode_picks_option(config):
     p = MockProvider(config, always_option=1)
     result = await p.generate("pick", schema=MENU)

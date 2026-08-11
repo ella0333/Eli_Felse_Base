@@ -124,6 +124,13 @@ Waiting does not use up one of the five response attempts, since the model never
 answered. Errors that waiting cannot fix, a bad key or an unknown model, still come
 back immediately. Set `transient_retries: 0` to turn the waiting off.
 
+When the retries do run out, the agent does not carry on at full speed. The next call,
+wherever it comes from, pauses first, and that pause grows for as long as the provider
+stays down, up to `transient_backoff_max` each time. An activity cut short by an outage
+skips its summary and survey rather than firing three more calls at a provider that
+isn't answering, and the main loop holds at the menu until it is back. Nothing is lost
+in the meantime: buffered messages are extracted on the next successful call.
+
 **daily_token_budget:** Total tokens (all calls, including background work) allowed per
 day. When the budget is hit, the agent auto-sleeps until the daily reset. **Never leave
 this at 0 on a paid API unless you truly mean unlimited.**

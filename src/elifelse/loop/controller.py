@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from elifelse.loop.lifecycle import run_activity
 from elifelse.loop.menus import build_main_menu
+from elifelse.providers.base import is_transient_error
 from elifelse.state.crash import clear_crash_context, write_crash_context
 from elifelse.textutils import print_system
 
@@ -78,6 +79,9 @@ class Controller:
             if not entries:
                 print_system("No activities available; nothing to do. Exiting loop.")
                 return
+            # Kept so a menu the provider never answered doesn't swallow the
+            # note the last activity left.
+            note_before_menu = self.note
             blocked_key, blocked_note = self._repeat_block(entries)
             menu = build_main_menu(
                 entries,
@@ -97,7 +101,18 @@ class Controller:
             result = await app.provider.generate(menu.text, schema=app.schemas.menu(menu.letters))
 
             if "error" in result:
+                if is_transient_error(result["error"]):
+                    # The provider is down, not broken. It has already been
+                    # waited on inside the call and will be waited on again
+                    # before the next one, so the agent holds at the menu until
+                    # the provider comes back rather than tripping the breaker
+                    # and ending a run that was only ever rate-limited.
+                    print_system("Provider unavailable; holding at the menu")
+                    app.status.set_activity("waiting for the provider")
+                    self.note = note_before_menu
+                    continue
                 menu_failures += 1
+                self.note = note_before_menu
                 print_system(f"Menu generation failed ({result['error']})")
                 if menu_failures >= MAX_CONSECUTIVE_MENU_FAILURES:
                     raise RuntimeError(
