@@ -1,10 +1,11 @@
 {
   "_comment": "Module trust manifest. The registry checks this at load time.",
-  "_updated": "2026-08-03",
+  "_updated": "2026-08-18",
   "official": {
     "text_rpg": "https://github.com/ella0333/Eli_Felse_Text_RPG",
     "discord_chat": "https://github.com/ella0333/Eli_Felse_Discord",
-    "web_search": "https://github.com/ella0333/Eli_Felse_Web_Search"
+    "web_search": "https://github.com/ella0333/Eli_Felse_Web_Search",
+    "writing": "https://github.com/ella0333/Eli_Felse_Writing"
   },
   "approved": {}
 }

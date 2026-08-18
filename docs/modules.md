@@ -20,6 +20,7 @@ The registry prints a tier label when loading each module:
 | [Text RPG](https://github.com/ella0333/Eli_Felse_Text_RPG) | Official | ella0333 | No | No | Text-based RPG module (Zork and other Z-machine games) |
 | [Discord](https://github.com/ella0333/Eli_Felse_Discord) | Official | ella0333 | Yes (bot token) | Yes (Discord DMs + server channels) | Chat with people over Discord DMs and in server channels |
 | [Web Search](https://github.com/ella0333/Eli_Felse_Web_Search) | Official | ella0333 | Yes (Tavily API key) | No | Ask a question and get an answer, or browse search results and read a page |
+| [Writing](https://github.com/ella0333/Eli_Felse_Writing) | Official | ella0333 | No | Only if you set up publishing by hand | Write blog posts and short stories a paragraph at a time, saved as Markdown |
 
 ## Getting your module listed
 
