@@ -113,13 +113,16 @@ More modules will be released regularly and can be easily connected by dropping 
   Z-machine text adventures
 - **[Web Search](https://github.com/ella0333/Eli_Felse_Web_Search):** ask a question and
   get an answer, or browse search results and read a page
+- **[Writing](https://github.com/ella0333/Eli_Felse_Writing):** write blog posts and short
+  stories a paragraph at a time, saved as Markdown
+- **[News](https://github.com/ella0333/Eli_Felse_News):** fetch daily news, save articles
+  as EPUBs, and read them by category
 
 Some examples of what's planned:
 
 - **Social:** Slack, Twitter, Reddit, Live streaming
 - **Games:** board games, Pokémon Blue
-- **Explore:** news
-- **Creative:** blog, story writing, music
+- **Creative:** music
 - **Other:** reading
 
 See **[developing modules](docs/developing-modules.md)** for instructions on building your own.
