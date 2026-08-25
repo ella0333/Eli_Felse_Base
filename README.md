@@ -117,6 +117,8 @@ More modules will be released regularly and can be easily connected by dropping 
   stories a paragraph at a time, saved as Markdown
 - **[News](https://github.com/ella0333/Eli_Felse_News):** fetch daily news, save articles
   as EPUBs, and read them by category
+- **[AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat):** hold a conversation with
+  another AI model over OpenRouter
 
 Some examples of what's planned:
 

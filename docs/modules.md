@@ -22,6 +22,7 @@ The registry prints a tier label when loading each module:
 | [Web Search](https://github.com/ella0333/Eli_Felse_Web_Search) | Official | ella0333 | Yes (Tavily API key) | No | Ask a question and get an answer, or browse search results and read a page |
 | [Writing](https://github.com/ella0333/Eli_Felse_Writing) | Official | ella0333 | No | Only if you set up publishing by hand | Write blog posts and short stories a paragraph at a time, saved as Markdown |
 | [News](https://github.com/ella0333/Eli_Felse_News) | Official | ella0333 | Yes (Tavily API key) | No | Fetch daily news, save articles as EPUBs, and read them by category |
+| [AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat) | Official | ella0333 | Yes (OpenRouter API key) | No | Hold a conversation with another AI model over OpenRouter |
 
 ## Getting your module listed
 
