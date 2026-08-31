@@ -119,12 +119,13 @@ More modules will be released regularly and can be easily connected by dropping 
   as EPUBs, and read them by category
 - **[AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat):** hold a conversation with
   another AI model over OpenRouter
+- **[Music](https://github.com/ella0333/Eli_Felse_Music):** write a prompt, generate a
+  track with ElevenLabs, and play back the library
 
 Some examples of what's planned:
 
 - **Social:** Slack, Twitter, Reddit, Live streaming
 - **Games:** board games, Pokémon Blue
-- **Creative:** music
 - **Other:** reading
 
 See **[developing modules](docs/developing-modules.md)** for instructions on building your own.
