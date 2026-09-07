@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from elifelse.loop.lifecycle import run_activity
-from elifelse.loop.menus import build_main_menu
+from elifelse.loop.menus import GROUP_PREFIX, ask_menu, build_group_menu, build_main_menu, group_rows
 from elifelse.providers.base import is_transient_error
 from elifelse.state.crash import clear_crash_context, write_crash_context
 from elifelse.textutils import print_system
@@ -126,17 +126,57 @@ class Controller:
             if result.get("thinking"):
                 print(f"\nThinking: {result['thinking']}")
             choice_letter = result["choice"]
-            activity = app.registry.get(menu.mapping[choice_letter])
-            # get_menu_label, not menu_label: an activity whose entry changes
-            # with the time of day (nap becoming "Go to bed") must be echoed
-            # back as the thing that was actually on the menu.
-            label = activity.get_menu_label(app.registry.ctx_for(activity))
-            print(f"Choice: {choice_letter} — {label}")
+            selected = menu.mapping[choice_letter]
+            if selected.startswith(GROUP_PREFIX):
+                print(f"Choice: {choice_letter} — {selected[len(GROUP_PREFIX):]}")
+                key = await self._choose_in_group(
+                    selected[len(GROUP_PREFIX):], entries, blocked_key, blocked_note
+                )
+                if key is None:
+                    # Unusable answer to the sub-menu. Back to the main menu
+                    # with the note intact rather than picking for the agent.
+                    self.note = note_before_menu
+                    continue
+                activity = app.registry.get(key)
+            else:
+                activity = app.registry.get(selected)
+                # get_menu_label, not menu_label: an activity whose entry changes
+                # with the time of day (nap becoming "Go to bed") must be echoed
+                # back as the thing that was actually on the menu.
+                label = activity.get_menu_label(app.registry.ctx_for(activity))
+                print(f"Choice: {choice_letter} — {label}")
             self.last_choice_key = activity.key
             self.note = await run_activity(app, activity)
 
         # loop budget reached (only used with --max-iterations)
         clear_crash_context(app)
+
+    async def _choose_in_group(
+        self,
+        group: str,
+        entries: list[dict[str, Any]],
+        blocked_key: str,
+        blocked_note: str,
+    ) -> str | None:
+        """Second level: which activity inside the chosen group.
+
+        None when the answer was unusable, which sends the loop back to the
+        main menu. The group is re-derived from the same entries the main menu
+        was built from, so the sub-menu can never offer something the main menu
+        did not already consider available.
+        """
+        members: list[dict[str, Any]] = []
+        for row in group_rows(entries):
+            if row["group"] == group:
+                members = row["members"]
+                break
+        if not members:
+            print_system(f"menu group '{group}' has nothing in it")
+            return None
+        menu = build_group_menu(group, members, blocked_key, blocked_note)
+        if not menu.letters:
+            return None
+        return await ask_menu(self.app, menu)
 
     def _repeat_block(self, entries: list[dict[str, Any]]) -> tuple[str, str]:
         """Which activity is held back this turn, and the reason to show.

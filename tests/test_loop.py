@@ -6,6 +6,7 @@ import json
 
 import pytest
 
+from elifelse.activities.base import Activity
 from elifelse.cli import main as cli_main
 from elifelse.providers.base import CompletionResult
 
@@ -197,3 +198,58 @@ def test_cli_end_to_end_mock(tmp_path):
     # It really ran: journal entries were written.
     journal = tmp_path / "data" / "journal"
     assert any(journal.glob("*.md"))
+
+
+# ~~~ menu groups ~~~
+class _Poker(Activity):
+    key = "poker"
+    menu_label = "Poker"
+    menu_group = "Play a Game"
+
+    async def run(self, ctx):
+        return "Played poker."
+
+
+class _Blackjack(Activity):
+    key = "blackjack"
+    menu_label = "Blackjack"
+    menu_group = "Play a Game"
+
+    async def run(self, ctx):
+        return "Played blackjack."
+
+
+async def test_a_grouped_choice_takes_two_answers_to_reach_the_activity(app, mock_provider):
+    """The main menu picks the group, the sub-menu picks the game. Two
+    separately installed modules, one line."""
+    app.registry.register(_Poker)
+    app.registry.register(_Blackjack)
+    mock_provider.feed(
+        {"thinking": "cards sound good", "choice": "A"},   # the group line
+        {"thinking": "blackjack today", "choice": "B"},    # inside the group
+    )
+
+    await app.controller.main_loop(max_iterations=1)
+
+    main_menu = mock_provider.calls[0]["messages"][-1]["content"]
+    assert "A) Play a Game (Poker, Blackjack)" in main_menu
+    sub_menu = mock_provider.calls[1]["messages"][-1]["content"]
+    assert "A) Poker" in sub_menu and "B) Blackjack" in sub_menu
+    # It ran the game, not the group.
+    assert app.controller.last_choice_key == "blackjack"
+
+
+async def test_an_unusable_group_answer_returns_to_the_main_menu(app, mock_provider):
+    """A sub-menu the provider never answered must not pick a game by default."""
+    app.registry.register(_Poker)
+    app.registry.register(_Blackjack)
+    mock_provider.feed(
+        {"thinking": "cards", "choice": "A"},
+        *[{"thinking": "t", "choice": "Z"} for _ in range(6)],  # exhausts retries
+        {"thinking": "cards again", "choice": "A"},
+        {"thinking": "poker then", "choice": "A"},
+    )
+
+    await app.controller.main_loop(max_iterations=2)
+
+    assert app.controller.last_choice_key == "poker"

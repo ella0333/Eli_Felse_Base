@@ -8,11 +8,12 @@ daemon thread so it never blocks the main async loop.
 from __future__ import annotations
 
 import json
+import mimetypes
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from typing import TYPE_CHECKING, Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from elifelse.textutils import print_system
 
@@ -92,6 +93,12 @@ def _make_handler(app: App):
                 self._handle_count(params)
             elif path == "/api/food-options":
                 self._handle_food_options_get()
+            elif path == "/api/module-views":
+                self._send_json(app.registry.dashboard_views())
+            elif path == "/api/module-state":
+                self._handle_module_state(params)
+            elif path.startswith("/modules/"):
+                self._handle_module_file(path)
             else:
                 self.send_error(404)
 
@@ -118,6 +125,31 @@ def _make_handler(app: App):
                 self.send_error(404)
 
         # ~~~ GET handlers ~~~
+
+        def _handle_module_state(self, params):
+            key = (params.get("key") or [""])[0]
+            self._send_json(app.registry.dashboard_state(key))
+
+        def _handle_module_file(self, path):
+            """Serve one file from a module's dashboard folder.
+
+            The registry does the resolving and refuses anything outside that
+            folder, so a module's own page is reachable and its source is not.
+            """
+            parts = path[len("/modules/"):].split("/", 1)
+            key = unquote(parts[0])
+            relative = unquote(parts[1]) if len(parts) > 1 else ""
+            target = app.registry.dashboard_file(key, relative)
+            if target is None:
+                self.send_error(404)
+                return
+            content_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+            body = target.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def _handle_status(self):
             now = app.clock()
@@ -323,6 +355,7 @@ body{
   font-size:13px;font-family:inherit;
 }
 .nav-link:hover{color:var(--text);background:var(--bg)}
+.module-frame{width:100%;height:calc(100vh - 110px);border:1px solid var(--border);border-radius:6px;background:var(--bg)}
 .nav-link.active{color:var(--text);background:var(--bg);border-color:var(--border)}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
@@ -652,6 +685,37 @@ async function clearFoodOptions(){
   await saveFoodOptions();
 }
 
+// Modules that ship a dashboard page get a tab each, built at load time so
+// installing one is enough. The page itself comes from the module's folder.
+async function loadModuleViews(){
+  try{
+    const r=await fetch('/api/module-views');
+    const views=await r.json();
+    const nav=document.querySelector('.nav-links');
+    const main=document.querySelector('.main');
+    for(const v of views){
+      const id='mod-'+v.key;
+      const btn=document.createElement('button');
+      btn.className='nav-link';
+      btn.dataset.page=id;
+      btn.textContent=(v.label||v.key).toLowerCase();
+      btn.onclick=()=>showPage(id);
+      nav.appendChild(btn);
+      const page=document.createElement('div');
+      page.id='page-'+id;
+      page.className='page';
+      // An iframe keeps the module's CSS out of the dashboard and lets it
+      // poll /api/module-state on whatever schedule it wants.
+      const frame=document.createElement('iframe');
+      frame.className='module-frame';
+      frame.src='/modules/'+encodeURIComponent(v.key)+'/';
+      page.appendChild(frame);
+      main.appendChild(page);
+    }
+  }catch(e){/* no modules, or the run has none installed */}
+}
+
+loadModuleViews();
 poll();setInterval(poll,3000);
 </script>
 </body>

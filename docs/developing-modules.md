@@ -141,6 +141,60 @@ Two things that follow from this:
 If you genuinely need a menu `ctx.choose` can't express, build it with
 `build_choice_menu()` from `elifelse.loop.menus` so it still matches.
 
+### Sharing a main-menu line
+
+Set `menu_group` and your activity moves off the main menu onto a shared line
+with everything else that declared the same string:
+
+```python
+class Poker(Activity):
+    key = "poker"
+    menu_label = "Poker (Texas Hold'em)"
+    menu_group = "Play a Board or Card Game"
+```
+
+```
+D) Play a Board or Card Game (Poker, Blackjack)
+```
+
+Picking it opens a lettered sub-menu of the members, rendered the same way as
+every other menu, and the activity runs normally from there. The label **is**
+the group: two modules that never heard of each other land on the same line by
+agreeing on a string, and nothing has to be registered anywhere.
+
+- The group sits where its first member would have, so installing a second game
+  doesn't move a line the agent already knows.
+- The anti-loop rule still applies per activity, not per group. The game you
+  just played is held back inside the sub-menu; the group line only goes dark
+  when that would empty it.
+- Use it when the members are genuinely alternatives. Two unrelated activities
+  behind one line cost the agent a turn to reach for no reason.
+
+## Dashboard views
+
+An activity can ship its own page in the dashboard. Point `dashboard_view` at an
+HTML file in your module folder and return whatever it should display from
+`dashboard_state()`:
+
+```python
+class Poker(Activity):
+    dashboard_view = "dashboard/index.html"
+
+    def dashboard_state(self, ctx) -> dict | None:
+        return self.game.snapshot() if self.game else None
+```
+
+The dashboard grows a tab named after your `menu_label`, serves your page from
+`/modules/<key>/`, and your page polls `/api/module-state?key=<key>` for the
+dict. The page runs in an iframe, so your CSS is yours alone and you choose your
+own refresh rate.
+
+Only the folder holding `dashboard_view` is served, and only files inside it: a
+request that resolves anywhere else is a 404, so the rest of your module stays
+unreachable. `dashboard_state()` is called on the dashboard's HTTP thread while
+the agent is mid-turn, so keep it cheap and never block in it. If it raises, the
+tab shows nothing and the run carries on.
+
 ## Base compatibility
 
 `requires_base` is a PEP 440 specifier checked against the base's version at load

@@ -121,11 +121,15 @@ More modules will be released regularly and can be easily connected by dropping 
   another AI model over OpenRouter
 - **[Music](https://github.com/ella0333/Eli_Felse_Music):** write a prompt, generate a
   track with ElevenLabs, and play back the library
+- **[Poker](https://github.com/ella0333/Eli_Felse_Poker):** play no-limit Texas Hold'em
+  against bot players, as a tournament or a cash game
+- **[Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack):** play Classic
+  Blackjack, Spanish 21, or Double Exposure against the dealer
 
 Some examples of what's planned:
 
 - **Social:** Slack, Twitter, Reddit, Live streaming
-- **Games:** board games, Pokémon Blue
+- **Games:** more board games, Pokémon Blue
 - **Other:** reading
 
 See **[developing modules](docs/developing-modules.md)** for instructions on building your own.

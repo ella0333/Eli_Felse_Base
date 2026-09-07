@@ -188,3 +188,91 @@ async def test_failed_startup_disables_activity(app):
     app.registry.register(BadStart)
     await app.registry.run_startups()
     assert "badstart" not in app.registry.activities
+
+
+# ~~~ dashboard views ~~~
+def _viewer_dropin(app, name="viewer"):
+    """A drop-in shipping a dashboard page, plus a secret beside it."""
+    folder = app.paths.modules / name
+    (folder / "dashboard").mkdir(parents=True)
+    (folder / "dashboard" / "index.html").write_text("<h1>table</h1>", encoding="utf-8")
+    (folder / "dashboard" / "table.css").write_text("body{}", encoding="utf-8")
+    (folder / "secret.py").write_text("TOKEN = 'hunter2'", encoding="utf-8")
+    (folder / "__init__.py").write_text(
+        textwrap.dedent(
+            """
+            from elifelse.activities.base import Activity
+
+            class ViewerActivity(Activity):
+                key = "viewer"
+                menu_label = "Viewer"
+                dashboard_view = "dashboard/index.html"
+
+                def dashboard_state(self, ctx):
+                    return {"pot": 120}
+
+                async def run(self, ctx):
+                    return ""
+
+            ACTIVITIES = [ViewerActivity]
+            """
+        ),
+        encoding="utf-8",
+    )
+    app.registry.load_dropins(app.paths.modules)
+    return folder
+
+
+def test_a_module_view_is_listed_and_served(app):
+    _viewer_dropin(app)
+    assert app.registry.dashboard_views() == [{"key": "viewer", "label": "Viewer"}]
+    assert app.registry.dashboard_file("viewer", "").read_text(encoding="utf-8") == "<h1>table</h1>"
+    assert app.registry.dashboard_file("viewer", "table.css") is not None
+
+
+def test_module_state_comes_back_as_a_dict(app):
+    _viewer_dropin(app)
+    assert app.registry.dashboard_state("viewer") == {"pot": 120}
+    # An activity with no view, and an unknown key, both answer empty.
+    assert app.registry.dashboard_state("nobody") == {}
+
+
+def test_a_module_state_error_never_reaches_the_http_thread(app):
+    class Exploding(Activity):
+        key = "exploding"
+        menu_label = "Exploding"
+
+        def dashboard_state(self, ctx):
+            raise RuntimeError("boom")
+
+        async def run(self, ctx):
+            return ""
+
+    app.registry.register(Exploding)
+    assert app.registry.dashboard_state("exploding") == {}
+
+
+def test_nothing_outside_the_dashboard_folder_is_reachable(app):
+    """The module's own source sits one level up from the page it serves."""
+    _viewer_dropin(app)
+    for escape in (
+        "../secret.py",
+        "../__init__.py",
+        r"..\secret.py",
+        "dashboard/../../secret.py",
+        "/etc/passwd",
+    ):
+        assert app.registry.dashboard_file("viewer", escape) is None
+
+
+def test_a_view_that_is_not_shipped_is_not_listed(app):
+    class Missing(Activity):
+        key = "missing"
+        menu_label = "Missing"
+        dashboard_view = "dashboard/nope.html"
+
+        async def run(self, ctx):
+            return ""
+
+    app.registry.register(Missing)
+    assert app.registry.dashboard_views() == []

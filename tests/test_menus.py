@@ -5,7 +5,12 @@ option values stay on the Python side."""
 import pytest
 
 from elifelse.activities.base import Activity
-from elifelse.loop.menus import build_choice_menu, build_main_menu, letters_for
+from elifelse.loop.menus import (
+    build_choice_menu,
+    build_group_menu,
+    build_main_menu,
+    letters_for,
+)
 from elifelse.providers.base import GenerationError
 
 
@@ -110,3 +115,65 @@ async def test_choose_rejects_a_letter_that_is_not_on_the_menu(app, mock_provide
 
     with pytest.raises(GenerationError):
         await activity.run(app.registry.ctx_for(activity))
+
+
+# ~~~ menu groups ~~~
+_GROUPED = [
+    {"key": "journal", "label": "Write in your journal", "status": "", "group": ""},
+    {"key": "poker", "label": "Poker", "status": "last: 2 hours ago", "group": "Play a Game"},
+    {"key": "blackjack", "label": "Blackjack", "status": "", "group": "Play a Game"},
+]
+
+
+def test_a_group_collapses_to_one_line_naming_its_members():
+    menu = build_main_menu(_GROUPED)
+    assert "A) Write in your journal" in menu.text
+    assert "B) Play a Game (Poker, Blackjack)" in menu.text
+    assert menu.letters == ["A", "B"]
+    assert menu.mapping == {"A": "journal", "B": "group:Play a Game"}
+    # The members are behind the line, not beside it.
+    assert "C)" not in menu.text
+
+
+def test_a_group_holds_the_position_of_its_first_member():
+    """Installing a second game must not move the line the agent already knows."""
+    one_game = [entry for entry in _GROUPED if entry["key"] != "blackjack"]
+    assert "B) Play a Game (Poker)" in build_main_menu(one_game).text
+    assert "B) Play a Game (Poker, Blackjack)" in build_main_menu(_GROUPED).text
+
+
+def test_an_entry_without_a_group_key_is_unchanged():
+    """Every activity written before groups existed omits the field entirely."""
+    menu = build_main_menu(_ENTRIES)
+    assert menu.mapping == {"A": "journal", "B": "ponder"}
+
+
+def test_blocking_one_member_leaves_the_group_on_the_main_menu():
+    menu = build_main_menu(_GROUPED, blocked_key="poker", blocked_note="you just played")
+    assert menu.mapping == {"A": "journal", "B": "group:Play a Game"}
+
+
+def test_blocking_the_only_member_blocks_the_whole_group_line():
+    one_game = [entry for entry in _GROUPED if entry["key"] != "blackjack"]
+    menu = build_main_menu(one_game, blocked_key="poker", blocked_note="you just played")
+    assert "Play a Game (Poker) (you just played)" in menu.text
+    assert menu.letters == ["A"]
+
+
+def test_the_group_submenu_letters_its_members():
+    members = [entry for entry in _GROUPED if entry["group"]]
+    menu = build_group_menu("Play a Game", members)
+    assert menu.mapping == {"A": "poker", "B": "blackjack"}
+    assert menu.text == (
+        "Play a Game\n"
+        "\n"
+        "A) Poker (last: 2 hours ago)\n"
+        "B) Blackjack"
+    )
+
+
+def test_a_blocked_member_shows_its_reason_inside_the_group():
+    members = [entry for entry in _GROUPED if entry["group"]]
+    menu = build_group_menu("Play a Game", members, "poker", "you just played")
+    assert menu.mapping == {"A": "blackjack"}
+    assert "Poker (last: 2 hours ago) (you just played)" in menu.text

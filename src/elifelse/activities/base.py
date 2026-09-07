@@ -8,6 +8,7 @@ skipped (with a clear message) when incompatible, instead of crashing mid-loop.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ class Activity(ABC):
     # ~~~ identity ~~~
     key: str = ""                  # "chess"
     menu_label: str = ""           # "Play Chess"
+    menu_group: str = ""           # shared main-menu line, e.g. "Play a Board or Card Game"
 
     # ~~~ requirements ~~~
     requires: list[str] = []       # config keys this activity needs (empty = key-free)
@@ -30,6 +32,24 @@ class Activity(ABC):
     memory_mode: str = "standard"  # "standard" or "game_batch" (3-msg merge, no classifier)
     memory_rules: str = ""         # extraction guidance ("" = base default)
     survey: str | None = None      # survey type after the activity, or None
+
+    # ~~~ dashboard ~~~
+    # A page inside the module folder, e.g. "dashboard/index.html". Set it and
+    # the dashboard grows a tab for this activity, served from the module's own
+    # files. Leave it "" and nothing changes.
+    dashboard_view: str = ""
+    # Filled in by the registry for drop-in modules; the root the view and its
+    # assets are resolved against. Never set this yourself.
+    module_dir: Path | None = None
+
+    def dashboard_state(self, ctx: ActivityContext) -> dict[str, Any] | None:
+        """Live state for this activity's dashboard page, or None.
+
+        Polled by the page behind `dashboard_view` through
+        /api/module-state?key=<key>. Must be cheap and must not block: it is
+        called from the dashboard's HTTP thread while the agent is mid-turn.
+        """
+        return None
 
     def get_menu_label(self, ctx: ActivityContext) -> str:
         """Menu label for this activity. Override for dynamic labels."""

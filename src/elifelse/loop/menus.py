@@ -24,6 +24,10 @@ class Menu:
     mapping: dict[str, str]  # letter -> activity key (or option value, for sub-menus)
 
 
+# Marks a main-menu letter that opens a group sub-menu rather than an activity.
+GROUP_PREFIX = "group:"
+
+
 def letters_for(count: int) -> list[str]:
     """A, B, C ... Z, then AA, AB ... so a long list never runs out."""
     alphabet = string.ascii_uppercase
@@ -83,6 +87,84 @@ def build_choice_menu(
     )
 
 
+def group_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse entries sharing a `group` label into one row each.
+
+    Ungrouped entries keep their own row. A group takes the position of its
+    first member, so installing a second game does not move the line the agent
+    already knows. The label itself is the group's identity: two modules that
+    declare the same `menu_group` string land on the same line without either
+    knowing the other exists.
+    """
+    rows: list[dict[str, Any]] = []
+    by_group: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        group = entry.get("group") or ""
+        if not group:
+            rows.append({"group": "", "members": [entry]})
+            continue
+        row = by_group.get(group)
+        if row is None:
+            row = {"group": group, "members": []}
+            by_group[group] = row
+            rows.append(row)
+        row["members"].append(entry)
+    return rows
+
+
+def _render_main_menu(
+    rows: list[dict[str, Any]],
+    note: str,
+    now: datetime,
+    notifications: str,
+    blocked_key: str,
+    blocked_note: str,
+) -> Menu:
+    letters: list[str] = []
+    mapping: dict[str, str] = {}
+    lines: list[str] = []
+
+    if note:
+        lines.append(note)
+        lines.append("")
+    if notifications:
+        lines.append(notifications)
+        lines.append("")
+
+    lines.append("What would you like to do next?")
+    for letter, row in zip(letters_for(len(rows)), rows, strict=True):
+        members = row["members"]
+        if not row["group"]:
+            entry = members[0]
+            status = f" ({entry['status']})" if entry.get("status") else ""
+            if blocked_key and entry["key"] == blocked_key:
+                lines.append(
+                    f"{letter}) {entry['label']}{status} "
+                    f"({blocked_note or 'unavailable this turn'})"
+                )
+                continue
+            letters.append(letter)
+            mapping[letter] = entry["key"]
+            lines.append(f"{letter}) {entry['label']}{status}")
+            continue
+
+        # A group line names its members, so the agent can see what is behind
+        # it without opening it.
+        listing = ", ".join(member["label"] for member in members)
+        label = f"{row['group']} ({listing})" if listing else row["group"]
+        if all(member["key"] == blocked_key for member in members):
+            # Blocking the only member blocks the whole line.
+            lines.append(f"{label} ({blocked_note or 'unavailable this turn'})")
+            continue
+        letters.append(letter)
+        mapping[letter] = f"{GROUP_PREFIX}{row['group']}"
+        lines.append(f"{letter}) {label}")
+
+    lines.append("")
+    lines.append(f"Current Time: {now.strftime('%I:%M %p')}")
+    return Menu(text="\n".join(lines), letters=letters, mapping=mapping)
+
+
 def build_main_menu(
     entries: list[dict[str, Any]],
     note: str = "",
@@ -96,41 +178,57 @@ def build_main_menu(
     The letters list IS the choice enum: whatever the model answers, only these
     exact letters can ever come back from the provider.
 
+    Entries carrying the same `group` label collapse into one line whose letter
+    maps to `group:<label>`; the caller opens `build_group_menu()` on it to get
+    the activity. Everything else about the frame is unchanged, so an agent
+    only ever learns one way to answer.
+
     `blocked_key` is the activity picked last turn. Its line still shows, with
     `blocked_note` saying why it is off the table, but its letter is left out
     of the enum so the model cannot pick it again. Showing the line and the
     reason is the point: an option that silently vanished would read as the
-    activity breaking. Never applied when it would leave nothing to choose.
+    activity breaking. Never applied when it would leave nothing to choose,
+    which for a group means the block only reaches the main menu when it would
+    empty the group.
     """
     now = now or datetime.now()
-    letters: list[str] = []
-    mapping: dict[str, str] = {}
-    lines: list[str] = []
+    rows = group_rows(entries)
+    menu = _render_main_menu(rows, note, now, notifications, blocked_key, blocked_note)
+    if not menu.letters and blocked_key:
+        menu = _render_main_menu(rows, note, now, notifications, "", "")
+    return menu
 
-    if note:
-        lines.append(note)
-        lines.append("")
-    if notifications:
-        lines.append(notifications)
-        lines.append("")
 
-    if len(entries) < 2:
-        blocked_key = ""
+def build_group_menu(
+    group: str,
+    members: list[dict[str, Any]],
+    blocked_key: str = "",
+    blocked_note: str = "",
+) -> Menu:
+    """The second level behind a grouped main-menu line.
 
-    lines.append("What would you like to do next?")
-    for letter, entry in zip(letters_for(len(entries)), entries, strict=True):
-        status = f" ({entry['status']})" if entry.get("status") else ""
-        if blocked_key and entry["key"] == blocked_key:
-            note_text = blocked_note or "unavailable this turn"
-            lines.append(f"{letter}) {entry['label']}{status} ({note_text})")
+    Same frame as every other menu: the group label is the question, members
+    are lettered, and the letters are the enum. A member held back by the
+    repeat rule still shows with its reason, exactly as it would on the main
+    menu, so the agent sees why rather than watching an option disappear.
+    """
+    options: list[str] = []
+    labels: list[str] = []
+    blocked_lines: list[str] = []
+    for member in members:
+        status = f" ({member['status']})" if member.get("status") else ""
+        if blocked_key and member["key"] == blocked_key and len(members) > 1:
+            blocked_lines.append(
+                f"{member['label']}{status} ({blocked_note or 'unavailable this turn'})"
+            )
             continue
-        letters.append(letter)
-        mapping[letter] = entry["key"]
-        lines.append(f"{letter}) {entry['label']}{status}")
+        options.append(member["key"])
+        labels.append(f"{member['label']}{status}")
 
-    lines.append("")
-    lines.append(f"Current Time: {now.strftime('%I:%M %p')}")
-    return Menu(text="\n".join(lines), letters=letters, mapping=mapping)
+    menu = build_choice_menu(group, options=options, labels=labels)
+    if blocked_lines:
+        menu.text = "\n".join([menu.text, *blocked_lines])
+    return menu
 
 
 def _sleep_length(minutes: int) -> str:

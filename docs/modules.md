@@ -24,6 +24,8 @@ The registry prints a tier label when loading each module:
 | [News](https://github.com/ella0333/Eli_Felse_News) | Official | ella0333 | Yes (Tavily API key) | No | Fetch daily news, save articles as EPUBs, and read them by category |
 | [AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat) | Official | ella0333 | Yes (OpenRouter API key) | No | Hold a conversation with another AI model over OpenRouter |
 | [Music](https://github.com/ella0333/Eli_Felse_Music) | Official | ella0333 | Yes (ElevenLabs API key) | No | Write a prompt, generate a track with ElevenLabs, and play back the library |
+| [Poker](https://github.com/ella0333/Eli_Felse_Poker) | Official | ella0333 | No | No | Play no-limit Texas Hold'em against bot players, as a tournament or a cash game |
+| [Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack) | Official | ella0333 | No | No | Play Classic Blackjack, Spanish 21, or Double Exposure against the dealer |
 
 ## Getting your module listed
 

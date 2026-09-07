@@ -176,7 +176,11 @@ class ActivityRegistry:
             tier_label = {"official": "official", "approved": "approved", "community": "community - unreviewed"}[tier]
             print_system(f"Loading drop-in module '{folder.name}' ({tier_label})")
             for cls in activities:
-                self.register(cls, origin=f"drop-in: {folder.name}")
+                instance = cls() if isinstance(cls, type) else cls
+                # The folder is the root a dashboard view and its assets are
+                # resolved against. Only the loader knows it.
+                instance.module_dir = folder.resolve()
+                self.register(instance, origin=f"drop-in: {folder.name}")
 
     def load_entry_points(self) -> None:
         try:
@@ -210,7 +214,12 @@ class ActivityRegistry:
         return self.activities[key]
 
     def menu_entries(self) -> list[dict[str, Any]]:
-        """(key, label, status) for every currently-available activity."""
+        """(key, label, status, group) for every currently-available activity.
+
+        `group` is the shared main-menu line an activity asks to sit under, or
+        "" for its own line. The menu builder does the collapsing; the registry
+        only reports what each activity declared.
+        """
         entries = []
         for key, activity in self.activities.items():
             ctx = self._contexts[key]
@@ -221,8 +230,75 @@ class ActivityRegistry:
             except Exception as e:
                 print_system(f"activity '{key}' status error: {e}")
                 status = ""
-            entries.append({"key": key, "label": activity.get_menu_label(ctx), "status": status})
+            entries.append({
+                "key": key,
+                "label": activity.get_menu_label(ctx),
+                "status": status,
+                "group": activity.menu_group,
+            })
         return entries
+
+    # ~~~ dashboard ~~~
+    def _module_root(self, activity: Activity) -> Path | None:
+        """The folder an activity's dashboard files are resolved against."""
+        if activity.module_dir is not None:
+            return activity.module_dir
+        module = sys.modules.get(activity.__class__.__module__)
+        file = getattr(module, "__file__", None)
+        return Path(file).resolve().parent if file else None
+
+    def dashboard_views(self) -> list[dict[str, str]]:
+        """One entry per activity offering a dashboard page.
+
+        The dashboard turns each into a tab. An activity that declares a view
+        it does not actually ship is left out rather than serving a broken tab.
+        """
+        views = []
+        for key, activity in self.activities.items():
+            if not activity.dashboard_view:
+                continue
+            root = self._module_root(activity)
+            if root is None or not (root / activity.dashboard_view).is_file():
+                print_system(f"activity '{key}' declares a dashboard view it does not ship")
+                continue
+            views.append({"key": key, "label": activity.menu_label})
+        return views
+
+    def dashboard_file(self, key: str, relative: str) -> Path | None:
+        """Resolve a request for one of a module's dashboard files.
+
+        Only the folder holding `dashboard_view` is reachable, never the rest
+        of the module, and never anything outside it: the resolved path must
+        still be inside that folder or this returns None. An empty `relative`
+        means the view itself.
+        """
+        activity = self.activities.get(key)
+        if activity is None or not activity.dashboard_view:
+            return None
+        root = self._module_root(activity)
+        if root is None:
+            return None
+        view = (root / activity.dashboard_view).resolve()
+        folder = view.parent
+        if not relative:
+            return view if view.is_file() else None
+        try:
+            target = (folder / relative).resolve()
+            target.relative_to(folder)
+        except (ValueError, OSError):
+            return None
+        return target if target.is_file() else None
+
+    def dashboard_state(self, key: str) -> dict[str, Any]:
+        """Live state for one module's page. Never raises into the HTTP thread."""
+        activity = self.activities.get(key)
+        if activity is None:
+            return {}
+        try:
+            return activity.dashboard_state(self._contexts[key]) or {}
+        except Exception as e:
+            print_system(f"activity '{key}' dashboard state error: {e}")
+            return {}
 
     async def run_startups(self) -> None:
         for key, activity in list(self.activities.items()):
