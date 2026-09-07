@@ -17,7 +17,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from elifelse.loop.lifecycle import run_activity
-from elifelse.loop.menus import GROUP_PREFIX, ask_menu, build_group_menu, build_main_menu, group_rows
+from elifelse.loop.menus import (
+    GROUP_PREFIX,
+    ask_menu,
+    build_group_menu,
+    build_main_menu,
+    group_rows,
+    record_menu_answer,
+)
 from elifelse.providers.base import is_transient_error
 from elifelse.state.crash import clear_crash_context, write_crash_context
 from elifelse.textutils import print_system
@@ -128,9 +135,13 @@ class Controller:
             choice_letter = result["choice"]
             selected = menu.mapping[choice_letter]
             if selected.startswith(GROUP_PREFIX):
-                print(f"Choice: {choice_letter} — {selected[len(GROUP_PREFIX):]}")
+                group = selected[len(GROUP_PREFIX):]
+                print(f"Choice: {choice_letter} — {group}")
+                # Filed before the sub-menu is asked, so the agent opens it
+                # already able to read the reason it just gave for opening it.
+                record_menu_answer(app, result.get("thinking", ""), group)
                 key = await self._choose_in_group(
-                    selected[len(GROUP_PREFIX):], entries, blocked_key, blocked_note
+                    group, entries, blocked_key, blocked_note
                 )
                 if key is None:
                     # Unusable answer to the sub-menu. Back to the main menu
@@ -145,6 +156,7 @@ class Controller:
                 # back as the thing that was actually on the menu.
                 label = activity.get_menu_label(app.registry.ctx_for(activity))
                 print(f"Choice: {choice_letter} — {label}")
+                record_menu_answer(app, result.get("thinking", ""), label)
             self.last_choice_key = activity.key
             self.note = await run_activity(app, activity)
 

@@ -253,3 +253,52 @@ async def test_an_unusable_group_answer_returns_to_the_main_menu(app, mock_provi
     await app.controller.main_loop(max_iterations=2)
 
     assert app.controller.last_choice_key == "poker"
+
+
+async def test_the_group_choice_is_in_context_when_the_submenu_is_asked(app, mock_provider):
+    """The agent must be able to read back why it opened the group.
+
+    Only response/command/entry/note reach context automatically, so a menu
+    answer used to vanish: the agent would say "I'll play poker", open the
+    group, then read a history where it had never chosen anything.
+    """
+    app.registry.register(_Poker)
+    app.registry.register(_Blackjack)
+    mock_provider.feed(
+        {"thinking": "I want to keep playing poker", "choice": "A"},
+        {"thinking": "poker then", "choice": "A"},
+    )
+
+    await app.controller.main_loop(max_iterations=1)
+
+    # calls: [0] main menu, [1] the group sub-menu
+    submenu_messages = str(mock_provider.calls[1]["messages"])
+    assert "I want to keep playing poker" in submenu_messages
+    assert "Choice: Play a Game" in submenu_messages
+
+
+class _Solitaire(Activity):
+    """Ungrouped, so it takes its own main-menu line."""
+
+    key = "solitaire"
+    menu_label = "Play Solitaire"
+
+    def allow_repeat(self, ctx):
+        return True
+
+    async def run(self, ctx):
+        return "Played solitaire."
+
+
+async def test_a_plain_activity_choice_is_recorded_too(app, mock_provider):
+    app.registry.register(_Solitaire)
+    mock_provider.feed(
+        {"thinking": "cards sound nice", "choice": "A"},
+        {"thinking": "again please", "choice": "A"},
+    )
+
+    await app.controller.main_loop(max_iterations=2)
+
+    second_menu = str(mock_provider.calls[1]["messages"])
+    assert "cards sound nice" in second_menu
+    assert "Choice: Play Solitaire" in second_menu

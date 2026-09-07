@@ -41,6 +41,20 @@ def letters_for(count: int) -> list[str]:
     return letters
 
 
+def record_menu_answer(app: Any, thinking: str, label: str) -> None:
+    """Put a menu answer back into context, in the agent's own voice.
+
+    The provider only files `response`/`command`/`entry`/`note` automatically,
+    so a menu answer would otherwise never land: the menu question goes into
+    context and the reply to it does not. An agent that opens a sub-menu then
+    reads back a history where it never chose anything will happily contradict
+    the reason it just gave for opening it.
+    """
+    parts = [part for part in (thinking.strip(), f"Choice: {label}".strip()) if part.strip()]
+    if parts:
+        app.provider.context.add("assistant", "\n".join(parts))
+
+
 async def ask_menu(app: Any, menu: Menu) -> str | None:
     """Show a menu, put it to the agent, and return the option it picked.
 
@@ -57,6 +71,7 @@ async def ask_menu(app: Any, menu: Menu) -> str | None:
     if letter not in menu.mapping:
         return None
     print(f"Choice: {letter}")
+    record_menu_answer(app, result.get("thinking", ""), menu.mapping[letter])
     return menu.mapping[letter]
 
 

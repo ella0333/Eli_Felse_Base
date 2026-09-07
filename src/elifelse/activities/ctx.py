@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from elifelse.loop.menus import build_choice_menu
+from elifelse.loop.menus import build_choice_menu, record_menu_answer
 from elifelse.providers.base import GenerationError
 from elifelse.structured.registry import freetext_schema, menu_schema
 
@@ -96,7 +96,11 @@ class ActivityContext:
             raise GenerationError(f"choose() failed: {result.get('error', 'no valid choice')}")
         if result.get("thinking"):
             print(f"\nThinking: {result['thinking']}")
-        print(f"Choice: {letter} — {shown[menu.letters.index(letter)]}")
+        label = shown[menu.letters.index(letter)]
+        print(f"Choice: {letter} — {label}")
+        # The label, not the option value: the agent should read back the words
+        # it was shown, never a key it never saw.
+        record_menu_answer(self.app, result.get("thinking", ""), label)
         return menu.mapping[letter]
 
     async def freetext(self, prompt: str, field: str = "response") -> str:
