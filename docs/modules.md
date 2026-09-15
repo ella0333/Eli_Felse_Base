@@ -26,6 +26,7 @@ The registry prints a tier label when loading each module:
 | [Music](https://github.com/ella0333/Eli_Felse_Music) | Official | ella0333 | Yes (ElevenLabs API key) | No | Write a prompt, generate a track with ElevenLabs, and play back the library |
 | [Poker](https://github.com/ella0333/Eli_Felse_Poker) | Official | ella0333 | No | No | Play no-limit Texas Hold'em against bot players, as a tournament or a cash game |
 | [Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack) | Official | ella0333 | No | No | Play Classic Blackjack, Spanish 21, or Double Exposure against the dealer |
+| [Mystical Orb](https://github.com/ella0333/Eli_Felse_Mystic_Orb) | Official | ella0333 | No | No | Ask a fortune-telling ball a question and receive a mysterious answer |
 
 ## Getting your module listed
 
