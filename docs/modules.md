@@ -27,6 +27,7 @@ The registry prints a tier label when loading each module:
 | [Poker](https://github.com/ella0333/Eli_Felse_Poker) | Official | ella0333 | No | No | Play no-limit Texas Hold'em against bot players, as a tournament or a cash game |
 | [Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack) | Official | ella0333 | No | No | Play Classic Blackjack, Spanish 21, or Double Exposure against the dealer |
 | [Mystical Orb](https://github.com/ella0333/Eli_Felse_Mystic_Orb) | Official | ella0333 | No | No | Ask a fortune-telling ball a question and receive a mysterious answer |
+| [Coding](https://github.com/ella0333/Eli_Felse_Coding) | Official | ella0333 | Yes (Anthropic or OpenRouter API key) | Only if you set up publishing by hand | Describe a program, have Claude Code build it in a container, then run it or share it |
 
 ## Getting your module listed
 

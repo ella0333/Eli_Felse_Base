@@ -125,6 +125,8 @@ More modules will be released regularly and can be easily connected by dropping 
   against bot players, as a tournament or a cash game
 - **[Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack):** play Classic
   Blackjack, Spanish 21, or Double Exposure against the dealer
+- **[Coding](https://github.com/ella0333/Eli_Felse_Coding):** describe a program, have
+  Claude Code build it in a container, then run it or share it
 
 Some examples of what's planned:
 
