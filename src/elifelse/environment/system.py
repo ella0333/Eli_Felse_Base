@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from elifelse.config import EnvironmentConfig, EnvironmentLocation
+from elifelse.environment.weather import format_temperature
 from elifelse.loop.menus import ask_menu, build_choice_menu
 from elifelse.textutils import print_system
 
@@ -52,7 +53,9 @@ class EnvironmentSystem:
         config: EnvironmentConfig,
         weather: WeatherService | None = None,
         clock: Callable[[], datetime] = datetime.now,
+        fahrenheit: bool = False,
     ) -> None:
+        self.fahrenheit = fahrenheit
         self.locations: dict[str, EnvironmentLocation] = {
             loc.key: loc for loc in config.locations
         }
@@ -69,6 +72,10 @@ class EnvironmentSystem:
         # comes up once rather than every boot.
         self.chosen = config.current in self.locations
         self.weather_now: WeatherNow | None = None
+
+    def temperature(self, temperature_c: float) -> str:
+        """A temperature in the unit the person reads, e.g. '12C' or '54F'."""
+        return format_temperature(temperature_c, self.fahrenheit)
 
     @property
     def current(self) -> EnvironmentLocation:
@@ -104,7 +111,7 @@ class EnvironmentSystem:
                 sky = f" ({weather_label(now.description, now.temperature_c)})" if now else ""
                 labels.append(f"{loc.name}{here}{sky} - {loc.short}")
                 continue
-            weather = f" [{now.description}, {now.temperature_c:.0f}C]" if now else ""
+            weather = f" [{now.description}, {self.temperature(now.temperature_c)}]" if now else ""
             labels.append(f"{loc.name}{here} — {loc.description}{weather}")
         return labels
 
@@ -144,7 +151,7 @@ class EnvironmentSystem:
         if self.weather_now is not None:
             lines.append(
                 f"The weather here: {self.weather_now.description}, "
-                f"{self.weather_now.temperature_c:.0f}C."
+                f"{self.temperature(self.weather_now.temperature_c)}."
             )
         lines.append(PRIVATE_AMBIENCE_RULE)
         return "\n".join(lines)

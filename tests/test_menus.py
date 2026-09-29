@@ -135,6 +135,18 @@ def test_a_group_collapses_to_one_line_naming_its_members():
     assert "C)" not in menu.text
 
 
+def test_a_group_status_replaces_the_member_listing():
+    entries = [
+        {"key": "walk", "label": "Go for a walk outside (a mile, 15 minutes)",
+         "status": "", "group": "Go Outside", "group_status": "last went outside 2 hours ago"},
+        {"key": "relax_outside", "label": "Relax outside for a bit (5, 10, or 15 minutes)",
+         "status": "", "group": "Go Outside", "group_status": "last went outside 2 hours ago"},
+    ]
+    menu = build_main_menu(entries)
+    assert "A) Go Outside (last went outside 2 hours ago)" in menu.text
+    assert "Go for a walk" not in menu.text
+
+
 def test_a_group_holds_the_position_of_its_first_member():
     """Installing a second game must not move the line the agent already knows."""
     one_game = [entry for entry in _GROUPED if entry["key"] != "blackjack"]

@@ -159,10 +159,13 @@ class App:
             and self.environment is None
         ):
             from elifelse.environment.system import EnvironmentSystem
-            from elifelse.environment.weather import WeatherService
+            from elifelse.environment.weather import WeatherService, uses_fahrenheit
 
             weather = WeatherService(clock=self.clock) if self.config.environment.weather else None
-            self.environment = EnvironmentSystem(self.config.environment, weather, self.clock)
+            self.environment = EnvironmentSystem(
+                self.config.environment, weather, self.clock,
+                fahrenheit=uses_fahrenheit(self.persona.timezone),
+            )
             self.scheduler.add_pre_menu_hook(self._environment_refresh)
 
         if self.daycycle is None:

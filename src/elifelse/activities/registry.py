@@ -223,19 +223,25 @@ class ActivityRegistry:
         entries = []
         for key, activity in self.activities.items():
             ctx = self._contexts[key]
+            group_status = ""
             try:
                 if not activity.available(ctx):
                     continue
                 status = activity.get_status(ctx)
+                if activity.menu_group:
+                    group_status = activity.get_group_status(ctx)
             except Exception as e:
                 print_system(f"activity '{key}' status error: {e}")
                 status = ""
-            entries.append({
+            entry = {
                 "key": key,
                 "label": activity.get_menu_label(ctx),
                 "status": status,
                 "group": activity.menu_group,
-            })
+            }
+            if group_status:
+                entry["group_status"] = group_status
+            entries.append(entry)
         return entries
 
     # ~~~ dashboard ~~~

@@ -16,6 +16,32 @@ from elifelse.environment.wmo import describe
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
+# Timezones in the United States, where a temperature reads in Fahrenheit.
+# Everywhere else gets Celsius. The timezone is the one set during setup.
+US_TIMEZONES = {
+    "America/New_York", "America/Detroit", "America/Kentucky/Louisville",
+    "America/Kentucky/Monticello", "America/Indiana/Indianapolis",
+    "America/Indiana/Vincennes", "America/Indiana/Winamac", "America/Indiana/Marengo",
+    "America/Indiana/Petersburg", "America/Indiana/Vevay", "America/Chicago",
+    "America/Indiana/Tell_City", "America/Indiana/Knox", "America/Menominee",
+    "America/North_Dakota/Center", "America/North_Dakota/New_Salem",
+    "America/North_Dakota/Beulah", "America/Denver", "America/Boise", "America/Phoenix",
+    "America/Los_Angeles", "America/Anchorage", "America/Juneau", "America/Sitka",
+    "America/Metlakatla", "America/Yakutat", "America/Nome", "America/Adak",
+    "Pacific/Honolulu", "America/Puerto_Rico",
+}
+
+
+def uses_fahrenheit(timezone: str) -> bool:
+    return timezone in US_TIMEZONES or timezone.startswith("US/")
+
+
+def format_temperature(temperature_c: float, fahrenheit: bool = False) -> str:
+    """'12C', or '54F' when the person's timezone is in the US."""
+    if fahrenheit:
+        return f"{temperature_c * 9 / 5 + 32:.0f}F"
+    return f"{temperature_c:.0f}C"
+
 
 @dataclass
 class WeatherNow:

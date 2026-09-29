@@ -126,6 +126,25 @@ async def test_menu_line_without_short_is_unchanged():
     )
 
 
+async def test_us_timezone_reads_fahrenheit():
+    fake = FakeTime(datetime(2026, 7, 3, 12, 0))
+    weather = FakeWeather([_weather_now(fake.now)], clock=fake.now)
+    env = EnvironmentSystem(_config(), weather=weather, clock=fake.now, fahrenheit=True)
+
+    await env.refresh()
+    assert "The weather here: steady rain, 54F." in env.prompt_block()
+
+
+def test_fahrenheit_follows_the_timezone():
+    from elifelse.environment.weather import uses_fahrenheit
+
+    assert uses_fahrenheit("America/Chicago")
+    assert uses_fahrenheit("US/Eastern")
+    assert not uses_fahrenheit("America/Toronto")
+    assert not uses_fahrenheit("Europe/London")
+    assert not uses_fahrenheit("UTC")
+
+
 async def test_menu_line_with_short_keeps_the_description_for_the_prompt():
     fake = FakeTime(datetime(2026, 7, 3, 12, 0))
     config = _config(current="garden")

@@ -51,6 +51,12 @@ class Activity(ABC):
         """
         return None
 
+    def get_group_status(self, ctx: ActivityContext) -> str:
+        """Status for the whole `menu_group` line, e.g. 'last went outside 2
+        hours ago'. When a member returns one, the main menu shows it in place
+        of the list of member labels. '' = list the members as usual."""
+        return ""
+
     def get_menu_label(self, ctx: ActivityContext) -> str:
         """Menu label for this activity. Override for dynamic labels."""
         return self.menu_label

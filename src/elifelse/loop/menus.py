@@ -164,8 +164,10 @@ def _render_main_menu(
             continue
 
         # A group line names its members, so the agent can see what is behind
-        # it without opening it.
-        listing = ", ".join(member["label"] for member in members)
+        # it without opening it, unless a member gives the line a status of
+        # its own ("last went outside 2 hours ago").
+        group_status = next((m["group_status"] for m in members if m.get("group_status")), "")
+        listing = group_status or ", ".join(member["label"] for member in members)
         label = f"{row['group']} ({listing})" if listing else row["group"]
         if all(member["key"] == blocked_key for member in members):
             # Blocking the only member blocks the whole line.
