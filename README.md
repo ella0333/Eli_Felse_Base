@@ -127,6 +127,8 @@ More modules will be released regularly and can be easily connected by dropping 
   Blackjack, Spanish 21, or Double Exposure against the dealer
 - **[Coding](https://github.com/ella0333/Eli_Felse_Coding):** describe a program, have
   Claude Code build it in a container, then run it or share it
+- **[Environment Expansion Pack](https://github.com/ella0333/Eli_Felse_Environment_DLC):** eleven
+  new environments, and a menu option for the agent to go outside
 
 Some examples of what's planned:
 
