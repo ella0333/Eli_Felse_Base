@@ -99,6 +99,8 @@ environment:
   current: ""
   # These three are the built-in defaults, listed here so they are easy to
   # replace. Delete the block entirely and you still get exactly this.
+  # A location can also have a `short` line: the environment menu then shows
+  # that instead of the full description, which stays in the prompt.
   locations:
     - key: "hillside_cabin"
       name: "Hillside Cabin"

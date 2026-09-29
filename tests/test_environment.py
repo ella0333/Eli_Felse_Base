@@ -115,6 +115,30 @@ async def test_refresh_adds_weather_line():
     assert "The weather here: steady rain, 12C." in block
 
 
+async def test_menu_line_without_short_is_unchanged():
+    fake = FakeTime(datetime(2026, 7, 3, 12, 0))
+    weather = FakeWeather([_weather_now(fake.now)] * 2, clock=fake.now)
+    env = EnvironmentSystem(_config(), weather=weather, clock=fake.now)
+
+    labels = await env._labels()
+    assert labels[0] == (
+        "The Garden — A small walled garden with a stone bench. [steady rain, 12C]"
+    )
+
+
+async def test_menu_line_with_short_keeps_the_description_for_the_prompt():
+    fake = FakeTime(datetime(2026, 7, 3, 12, 0))
+    config = _config(current="garden")
+    config.locations[0].short = "Walled garden with a bench"
+    weather = FakeWeather([_weather_now(fake.now), None], clock=fake.now)
+    env = EnvironmentSystem(config, weather=weather, clock=fake.now)
+
+    labels = await env._labels()
+    assert labels[0] == "The Garden (you are here) (steady rain & cool) - Walled garden with a bench"
+    assert labels[1] == "The Attic — A dusty attic full of boxes."
+    assert "A small walled garden with a stone bench." in env.prompt_block()
+
+
 # ~~~ WeatherService caching ~~~
 async def test_weather_cached_within_ttl_and_refetched_after():
     fake = FakeTime(datetime(2026, 7, 3, 12, 0))

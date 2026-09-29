@@ -29,6 +29,23 @@ PRIVATE_AMBIENCE_RULE = (
 )
 
 
+def temperature_word(temp_c: float) -> str:
+    """How a temperature feels, as one word for a menu label."""
+    for limit, word in ((0, "freezing"), (8, "cold"), (15, "cool"), (22, "mild"),
+                        (28, "warm"), (35, "hot")):
+        if temp_c <= limit:
+            return word
+    return "sweltering"
+
+
+def weather_label(description: str, temp_c: float) -> str:
+    """'overcast & cool': the sky and how warm it is, without the numbers."""
+    for article in ("a ", "an "):
+        if description.startswith(article):
+            description = description[len(article):]
+    return f"{description} & {temperature_word(temp_c)}"
+
+
 class EnvironmentSystem:
     def __init__(
         self,
@@ -78,11 +95,16 @@ class EnvironmentSystem:
         labels = []
         for key, loc in self.locations.items():
             here = " (you are here)" if key == self.current_key and self.chosen else ""
-            weather = ""
+            now = None
             if self.weather is not None:
                 now = await self.weather.current(loc.latitude, loc.longitude)
-                if now is not None:
-                    weather = f" [{now.description}, {now.temperature_c:.0f}C]"
+            if loc.short:
+                # The short form: name, a weather label, the one-line summary.
+                # The full description is for the prompt, not the menu.
+                sky = f" ({weather_label(now.description, now.temperature_c)})" if now else ""
+                labels.append(f"{loc.name}{here}{sky} - {loc.short}")
+                continue
+            weather = f" [{now.description}, {now.temperature_c:.0f}C]" if now else ""
             labels.append(f"{loc.name}{here} — {loc.description}{weather}")
         return labels
 

@@ -160,6 +160,10 @@ class EnvironmentLocation(BaseModel):
     description: str
     latitude: float
     longitude: float
+    # Optional one-line summary for the environment menu. When set, the menu
+    # shows it with a short weather label and keeps the full description for
+    # the prompt. Left empty, the menu line is the description as before.
+    short: str = ""
 
 
 # Three places, far enough apart that the weather is visibly different in each,
