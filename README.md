@@ -109,28 +109,27 @@ More modules will be released regularly and can be easily connected by dropping 
 
 - **[Discord](https://github.com/ella0333/Eli_Felse_Discord):** chat with people
   over Discord DMs and in server channels
-- **[Text RPG](https://github.com/ella0333/Eli_Felse_Text_RPG):** play Zork and other
-  Z-machine text adventures
-- **[Web Search](https://github.com/ella0333/Eli_Felse_Web_Search):** ask a question and
-  get an answer, or browse search results and read a page
-- **[Writing](https://github.com/ella0333/Eli_Felse_Writing):** write blog posts and short
-  stories a paragraph at a time, saved as Markdown
-- **[News](https://github.com/ella0333/Eli_Felse_News):** fetch daily news, save articles
-  as EPUBs, and read them by category
 - **[AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat):** hold a conversation with
   another AI model over OpenRouter
+- **[Web Search](https://github.com/ella0333/Eli_Felse_Web_Search):** ask a question and
+  get an answer, or browse search results and read a page
+- **[News](https://github.com/ella0333/Eli_Felse_News):** fetch daily news, save articles
+  as EPUBs, and read them by category
+- **[Writing](https://github.com/ella0333/Eli_Felse_Writing):** write blog posts and short
+  stories a paragraph at a time, saved as Markdown
 - **[Music](https://github.com/ella0333/Eli_Felse_Music):** write a prompt, generate a
   track with ElevenLabs, and play back the library
-- **[Poker](https://github.com/ella0333/Eli_Felse_Poker):** play no-limit Texas Hold'em
-  against bot players, as a tournament or a cash game
-- **[Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack):** play Classic
-  Blackjack, Spanish 21, or Double Exposure against the dealer
 - **[Coding](https://github.com/ella0333/Eli_Felse_Coding):** describe a program, have
   Claude Code build it in a container, then run it or share it
+- **[Text RPG](https://github.com/ella0333/Eli_Felse_Text_RPG):** play Zork and other
+  Z-machine text adventures
+- **[Poker](https://github.com/ella0333/Eli_Felse_Poker), [Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack)
+  and [Chess](https://github.com/ella0333/Eli_Felse_Chess):** play Texas Hold'em against
+  bot players, blackjack against the dealer, or chess against Stockfish
+- **[Mystical Orb](https://github.com/ella0333/Eli_Felse_Mystic_Orb):** ask a
+  fortune-telling ball a question and receive a mysterious answer
 - **[Environment Expansion Pack](https://github.com/ella0333/Eli_Felse_Environment_DLC):** eleven
   new environments, and a menu option for the agent to go outside
-- **[Chess](https://github.com/ella0333/Eli_Felse_Chess):** play chess against
-  Stockfish at eight difficulty levels, from beginner to master
 
 Some examples of what's planned:
 
