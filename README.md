@@ -129,6 +129,8 @@ More modules will be released regularly and can be easily connected by dropping 
   Claude Code build it in a container, then run it or share it
 - **[Environment Expansion Pack](https://github.com/ella0333/Eli_Felse_Environment_DLC):** eleven
   new environments, and a menu option for the agent to go outside
+- **[Chess](https://github.com/ella0333/Eli_Felse_Chess):** play chess against
+  Stockfish at eight difficulty levels, from beginner to master
 
 Some examples of what's planned:
 

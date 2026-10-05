@@ -29,6 +29,7 @@ The registry prints a tier label when loading each module:
 | [Mystical Orb](https://github.com/ella0333/Eli_Felse_Mystic_Orb) | Official | ella0333 | No | No | Ask a fortune-telling ball a question and receive a mysterious answer |
 | [Coding](https://github.com/ella0333/Eli_Felse_Coding) | Official | ella0333 | Yes (Anthropic or OpenRouter API key) | Only if you set up publishing by hand | Describe a program, have Claude Code build it in a container, then run it or share it |
 | [Environment Expansion Pack](https://github.com/ella0333/Eli_Felse_Environment_DLC) | Official | ella0333 | No | No | Eleven new environments, and a menu option for the agent to go outside |
+| [Chess](https://github.com/ella0333/Eli_Felse_Chess) | Official | ella0333 | No | No | Play chess against Stockfish at eight difficulty levels, from beginner to master |
 
 ## Getting your module listed
 
