@@ -178,7 +178,8 @@ agreeing on a string, and nothing has to be registered anywhere.
   just played is held back inside the sub-menu; the group line only goes dark
   when that would empty it.
 - While a group has only one member, picking the line runs that activity
-  straight away, without a one-option sub-menu in between.
+  straight away, without a one-option sub-menu in between, and the line shows
+  that activity's status (`Social Media (Reddit) (last: 2 hours ago)`).
 - Use it when the members are genuinely alternatives. Two unrelated activities
   behind one line cost the agent a turn to reach for no reason.
 

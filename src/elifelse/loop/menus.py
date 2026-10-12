@@ -172,6 +172,10 @@ def _render_main_menu(
         group_status = next((m["group_status"] for m in members if m.get("group_status")), "")
         listing = group_status or ", ".join(member["label"] for member in members)
         label = f"{row['group']} ({listing})" if listing else row["group"]
+        if len(members) == 1 and not group_status and members[0].get("status"):
+            # One member opens straight into the activity, so its line carries
+            # the activity's own status the way an ungrouped line does.
+            label += f" ({members[0]['status']})"
         disabled = [member["disabled"] for member in members if member.get("disabled")]
         if all(member.get("disabled") or member["key"] == blocked_key for member in members):
             # Nothing left to pick inside it, so the whole line goes dark.

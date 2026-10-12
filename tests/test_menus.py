@@ -168,7 +168,7 @@ def test_blocking_one_member_leaves_the_group_on_the_main_menu():
 def test_blocking_the_only_member_blocks_the_whole_group_line():
     one_game = [entry for entry in _GROUPED if entry["key"] != "blackjack"]
     menu = build_main_menu(one_game, blocked_key="poker", blocked_note="you just played")
-    assert "Play a Game (Poker) (you just played)" in menu.text
+    assert "Play a Game (Poker) (last: 2 hours ago) (you just played)" in menu.text
     assert menu.letters == ["A"]
 
 
@@ -221,3 +221,8 @@ def test_a_disabled_member_shows_its_reason_inside_the_group():
     menu = build_group_menu("Play a Game", members)
     assert menu.mapping == {"A": "blackjack"}
     assert "Poker (closed)" in menu.text
+
+
+def test_a_one_member_group_line_shows_the_member_status():
+    one_game = [entry for entry in _GROUPED if entry["key"] != "blackjack"]
+    assert "B) Play a Game (Poker) (last: 2 hours ago)" in build_main_menu(one_game).text
