@@ -82,6 +82,12 @@ class Activity(ABC):
         """Hide from the menu when False (e.g. daily limit exhausted)."""
         return True
 
+    def disabled_note(self, ctx: ActivityContext) -> str:
+        """Why the entry is on the menu but can't be picked right now, e.g.
+        'signed out'. '' = pickable as usual. Unlike available(), the line
+        stays visible, so the agent sees the reason instead of a missing option."""
+        return ""
+
     def allow_repeat(self, ctx: ActivityContext) -> bool:
         """True when this activity may be picked twice in a row.
 

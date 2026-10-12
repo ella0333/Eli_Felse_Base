@@ -189,3 +189,35 @@ def test_a_blocked_member_shows_its_reason_inside_the_group():
     menu = build_group_menu("Play a Game", members, "poker", "you just played")
     assert menu.mapping == {"A": "blackjack"}
     assert "Poker (last: 2 hours ago) (you just played)" in menu.text
+
+
+# ~~~ disabled entries ~~~
+def test_a_disabled_entry_shows_its_reason_and_has_no_letter():
+    entries = [
+        {"key": "journal", "label": "Write in your journal", "status": "", "group": ""},
+        {"key": "reddit", "label": "Reddit", "status": "", "group": "", "disabled": "signed out"},
+    ]
+    menu = build_main_menu(entries)
+    assert "B) Reddit (signed out)" in menu.text
+    assert menu.letters == ["A"]
+
+
+def test_a_group_whose_only_member_is_disabled_goes_dark():
+    entries = [
+        {"key": "journal", "label": "Write in your journal", "status": "", "group": ""},
+        {"key": "reddit", "label": "Reddit", "status": "", "group": "Social Media",
+         "disabled": "signed out"},
+    ]
+    menu = build_main_menu(entries)
+    assert "Social Media (Reddit) (signed out)" in menu.text
+    assert menu.letters == ["A"]
+
+
+def test_a_disabled_member_shows_its_reason_inside_the_group():
+    members = [
+        {"key": "poker", "label": "Poker", "status": "", "group": "Play a Game", "disabled": "closed"},
+        {"key": "blackjack", "label": "Blackjack", "status": "", "group": "Play a Game"},
+    ]
+    menu = build_group_menu("Play a Game", members)
+    assert menu.mapping == {"A": "blackjack"}
+    assert "Poker (closed)" in menu.text

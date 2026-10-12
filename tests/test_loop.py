@@ -277,6 +277,18 @@ async def test_the_group_choice_is_in_context_when_the_submenu_is_asked(app, moc
     assert "Choice: Play a Game" in submenu_messages
 
 
+async def test_a_group_with_one_member_skips_the_submenu(app, mock_provider):
+    """A sub-menu with a single option would only cost the agent a turn."""
+    app.registry.register(_Poker)
+    mock_provider.feed({"thinking": "cards sound good", "choice": "A"})
+
+    await app.controller.main_loop(max_iterations=1)
+
+    assert "A) Play a Game (Poker)" in mock_provider.calls[0]["messages"][-1]["content"]
+    assert len(mock_provider.calls) == 1
+    assert app.controller.last_choice_key == "poker"
+
+
 class _Solitaire(Activity):
     """Ungrouped, so it takes its own main-menu line."""
 

@@ -3,4 +3,4 @@
 The LLM makes choices; Python does everything else.
 """
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"

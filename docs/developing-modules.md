@@ -72,6 +72,16 @@ It is checked per turn against live state, not once at load, so returning True
 is an exemption for this menu rather than an opt-out from the rule. Keep it
 narrow. An activity that always returns True is one the agent can get stuck in.
 
+When your activity can't run for a while, for example because a sign-in has
+expired, return the reason from `disabled_note()`. The line stays on the menu
+with that reason in brackets, but it can't be picked until you return `""` again.
+`available()` returning False hides the line completely instead.
+
+```python
+def disabled_note(self, ctx) -> str:
+    return "" if self.client.signed_in() else "signed out"
+```
+
 ## The ctx API
 
 `ctx` gives you typed, pre-validated results instead of raw LLM responses:
@@ -167,6 +177,8 @@ agreeing on a string, and nothing has to be registered anywhere.
 - The anti-loop rule still applies per activity, not per group. The game you
   just played is held back inside the sub-menu; the group line only goes dark
   when that would empty it.
+- While a group has only one member, picking the line runs that activity
+  straight away, without a one-option sub-menu in between.
 - Use it when the members are genuinely alternatives. Two unrelated activities
   behind one line cost the agent a turn to reach for no reason.
 

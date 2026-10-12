@@ -152,6 +152,9 @@ def _render_main_menu(
         if not row["group"]:
             entry = members[0]
             status = f" ({entry['status']})" if entry.get("status") else ""
+            if entry.get("disabled"):
+                lines.append(f"{letter}) {entry['label']}{status} ({entry['disabled']})")
+                continue
             if blocked_key and entry["key"] == blocked_key:
                 lines.append(
                     f"{letter}) {entry['label']}{status} "
@@ -169,9 +172,11 @@ def _render_main_menu(
         group_status = next((m["group_status"] for m in members if m.get("group_status")), "")
         listing = group_status or ", ".join(member["label"] for member in members)
         label = f"{row['group']} ({listing})" if listing else row["group"]
-        if all(member["key"] == blocked_key for member in members):
-            # Blocking the only member blocks the whole line.
-            lines.append(f"{label} ({blocked_note or 'unavailable this turn'})")
+        disabled = [member["disabled"] for member in members if member.get("disabled")]
+        if all(member.get("disabled") or member["key"] == blocked_key for member in members):
+            # Nothing left to pick inside it, so the whole line goes dark.
+            reason = disabled[0] if len(disabled) == len(members) else blocked_note
+            lines.append(f"{label} ({reason or 'unavailable this turn'})")
             continue
         letters.append(letter)
         mapping[letter] = f"{GROUP_PREFIX}{row['group']}"
@@ -234,6 +239,9 @@ def build_group_menu(
     blocked_lines: list[str] = []
     for member in members:
         status = f" ({member['status']})" if member.get("status") else ""
+        if member.get("disabled"):
+            blocked_lines.append(f"{member['label']}{status} ({member['disabled']})")
+            continue
         if blocked_key and member["key"] == blocked_key and len(members) > 1:
             blocked_lines.append(
                 f"{member['label']}{status} ({blocked_note or 'unavailable this turn'})"

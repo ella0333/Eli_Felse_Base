@@ -224,12 +224,14 @@ class ActivityRegistry:
         for key, activity in self.activities.items():
             ctx = self._contexts[key]
             group_status = ""
+            disabled = ""
             try:
                 if not activity.available(ctx):
                     continue
                 status = activity.get_status(ctx)
                 if activity.menu_group:
                     group_status = activity.get_group_status(ctx)
+                disabled = activity.disabled_note(ctx)
             except Exception as e:
                 print_system(f"activity '{key}' status error: {e}")
                 status = ""
@@ -241,6 +243,8 @@ class ActivityRegistry:
             }
             if group_status:
                 entry["group_status"] = group_status
+            if disabled:
+                entry["disabled"] = disabled
             entries.append(entry)
         return entries
 

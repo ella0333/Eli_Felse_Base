@@ -185,6 +185,10 @@ class Controller:
         if not members:
             print_system(f"menu group '{group}' has nothing in it")
             return None
+        if len(members) == 1:
+            # A sub-menu with one option in it would only cost the agent a turn.
+            # The main menu line already named it, so picking the line picks it.
+            return members[0]["key"]
         menu = build_group_menu(group, members, blocked_key, blocked_note)
         if not menu.letters:
             return None
