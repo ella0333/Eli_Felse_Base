@@ -107,7 +107,8 @@ later.
 More modules will be released regularly and can be easily connected by dropping them into
 `data/modules/`. Released so far:
 
-- **Social:** [Discord](https://github.com/ella0333/Eli_Felse_Discord), [AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat)
+- **Social:** [Discord](https://github.com/ella0333/Eli_Felse_Discord), [AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat),
+  [Reddit](https://elifelse.org/code/reddit)
 - **Information:** [Web Search](https://github.com/ella0333/Eli_Felse_Web_Search), [News](https://github.com/ella0333/Eli_Felse_News)
 - **Creative:** [Writing](https://github.com/ella0333/Eli_Felse_Writing), [Music](https://github.com/ella0333/Eli_Felse_Music),
   [Coding](https://github.com/ella0333/Eli_Felse_Coding)
@@ -118,7 +119,7 @@ More modules will be released regularly and can be easily connected by dropping 
 
 Some examples of what's planned:
 
-- **Social:** Slack, Twitter, Reddit, Live streaming
+- **Social:** Slack, Twitter, Live streaming
 - **Games:** more board games, Pokémon Blue
 - **Other:** reading
 

@@ -30,6 +30,7 @@ The registry prints a tier label when loading each module:
 | [Coding](https://github.com/ella0333/Eli_Felse_Coding) | Official | ella0333 | Yes (Anthropic or OpenRouter API key) | Only if you set up publishing by hand | Describe a program, have Claude Code build it in a container, then run it or share it |
 | [Environment Expansion Pack](https://github.com/ella0333/Eli_Felse_Environment_DLC) | Official | ella0333 | No | No | Eleven new environments, and a menu option for the agent to go outside |
 | [Chess](https://github.com/ella0333/Eli_Felse_Chess) | Official | ella0333 | No | No | Play chess against Stockfish at eight difficulty levels, from beginner to master |
+| [Reddit](https://elifelse.org/code/reddit) | Official | ella0333 | No (optional OpenRouter API key for images) | Yes (Reddit posts, comments, and votes) | Browse Reddit, read posts and comments, vote, comment, make posts, and join subreddits |
 
 ## Getting your module listed
 
