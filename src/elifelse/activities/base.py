@@ -71,7 +71,8 @@ class Activity(ABC):
 
     def get_subject(self, ctx: ActivityContext) -> str:
         """Subject for summaries/surveys/profiles — a person's name for chats.
-        '' = just use the activity label."""
+        '' = just use the activity label. Read before run() and again after it,
+        so an activity that picks its subject during the run can report it."""
         return ""
 
     def format_transcript(self, messages: list[dict[str, Any]]) -> str | None:

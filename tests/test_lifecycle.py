@@ -88,3 +88,30 @@ async def test_tracker_and_status_updated(app, mock_provider):
     assert app.status.activity == "choosing what to do"
     assert app.stats.get("activity.talker") == 1
     assert "last:" in app.activity_tracker.status_line("talker")
+
+
+async def test_a_subject_picked_during_the_run_reaches_the_survey(app, mock_provider):
+    """An activity that opens on its own menu only knows its subject after
+    run() has picked one, so the lifecycle asks get_subject() again."""
+    from elifelse.innerlife.system import InnerLife
+
+    class PicksBook(Activity):
+        key = "picks_book"
+        menu_label = "Read"
+        survey = "simple"
+        book = ""
+
+        def get_subject(self, ctx):
+            return f"reading {self.book}" if self.book else ""
+
+        async def run(self, ctx):
+            self.book = "A Test Book"
+            return "done reading"
+
+    app.innerlife = InnerLife(mock_provider, app.schemas, app.paths, app.clock)
+    app.registry.register(PicksBook)
+    mock_provider.feed({"thinking": "t", "emotion": "calm"})
+
+    await run_activity(app, app.registry.get("picks_book"))
+
+    assert "You just finished reading A Test Book" in str(mock_provider.calls[-1]["messages"])

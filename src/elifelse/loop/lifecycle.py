@@ -93,6 +93,10 @@ async def run_activity(app: App, activity: Activity, subject: str = "") -> str:
         note = f"{label} ended early because the model failed to produce a valid response."
         outcome = "no_response"
 
+    # A module that opens on its own menu (books, save files) only knows its
+    # subject once run() has picked one, so it gets asked again here.
+    subject = subject or activity.get_subject(ctx)
+
     # 5a. everything this activity added to the context
     new_messages = app.provider.context.messages_since(snapshot)
 

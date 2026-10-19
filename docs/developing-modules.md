@@ -118,7 +118,9 @@ starts, which is fine for a chat that always talks to the same person and no use
 module that offers a menu of people first. Pick the subject whenever you like and pass it
 to `remember()`; the lifecycle flushes every buffer your activity filled when it ends,
 not just the declared one. Override `get_subject()` when the subject is also the right
-label for summaries and surveys, not to make memory work.
+label for summaries and surveys, not to make memory work. If it returned nothing before
+`run()`, it is asked again after, so a module that picks a book or a save file from its
+own menu can name it for the survey once the choice is made.
 
 ### Menus are always lettered
 
