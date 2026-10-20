@@ -89,6 +89,20 @@ def test_messages_since_snapshot():
     assert "during 1" in new[0]["content"]
 
 
+def test_messages_since_survives_trimming():
+    """A long activity trims the context from the front. The new messages
+    must still all be found, not counted from the snapshot's length."""
+    s = make_store(max_chars=300)
+    for i in range(4):
+        s.add("user", f"before {i} " + "x" * 40)
+    snap = s.snapshot()
+    for i in range(4):
+        s.add("assistant", f"during {i} " + "y" * 40)
+    surviving = [m for m in s.messages if "during" in m["content"]]
+    assert len(surviving) == 4  # all new ones still in context, some old ones trimmed
+    assert s.messages_since(snap) == surviving
+
+
 def test_oldest_timestamp():
     s = make_store()
     assert s.oldest_timestamp() is None

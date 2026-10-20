@@ -17,7 +17,7 @@ import random
 import re
 from abc import ABC, abstractmethod
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -73,6 +73,9 @@ class Snapshot:
     messages: list[dict[str, Any]]
     timestamps: list[str]
     system_prompt: str
+    # The live message objects at snapshot time. Holding them keeps their ids
+    # from being reused, so messages_since can match by identity.
+    live: tuple[dict[str, Any], ...] = field(default=(), repr=False)
 
 
 @dataclass
@@ -166,6 +169,7 @@ class ContextStore:
             messages=copy.deepcopy(list(self.messages)),
             timestamps=list(self.timestamps),
             system_prompt=self.system_prompt,
+            live=tuple(self.messages),
         )
 
     def restore(self, snap: Snapshot) -> None:
@@ -175,8 +179,13 @@ class ContextStore:
         self.trim()
 
     def messages_since(self, snap: Snapshot) -> list[dict[str, Any]]:
-        """Messages added after a snapshot was taken (for summaries/extraction)."""
-        return list(self.messages)[len(snap.messages):]
+        """Messages added after a snapshot was taken (for summaries/extraction).
+
+        Matched by identity, not position: a long activity trims the oldest
+        messages from the front, and counting from the snapshot's length would
+        then skip the start of the activity."""
+        before = {id(m) for m in snap.live}
+        return [m for m in self.messages if id(m) not in before]
 
     def oldest_timestamp(self) -> str | None:
         return self.timestamps[0] if self.timestamps else None
