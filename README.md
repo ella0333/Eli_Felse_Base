@@ -109,7 +109,8 @@ More modules will be released regularly and can be easily connected by dropping 
 
 - **Social:** [Discord](https://github.com/ella0333/Eli_Felse_Discord), [AI Chat](https://github.com/ella0333/Eli_Felse_AI_Chat),
   [Reddit](https://elifelse.org/code/reddit)
-- **Information:** [Web Search](https://github.com/ella0333/Eli_Felse_Web_Search), [News](https://github.com/ella0333/Eli_Felse_News)
+- **Information:** [Web Search](https://github.com/ella0333/Eli_Felse_Web_Search), [News](https://github.com/ella0333/Eli_Felse_News),
+  [Reading](https://github.com/ella0333/Eli_Felse_Reading)
 - **Creative:** [Writing](https://github.com/ella0333/Eli_Felse_Writing), [Music](https://github.com/ella0333/Eli_Felse_Music),
   [Coding](https://github.com/ella0333/Eli_Felse_Coding)
 - **Games:** [Text RPG](https://github.com/ella0333/Eli_Felse_Text_RPG), [Poker](https://github.com/ella0333/Eli_Felse_Poker),
@@ -121,7 +122,6 @@ Some examples of what's planned:
 
 - **Social:** Slack, Twitter, Live streaming
 - **Games:** more board games, Pokémon Blue
-- **Other:** reading
 
 See **[developing modules](docs/developing-modules.md)** for instructions on building your own.
 
