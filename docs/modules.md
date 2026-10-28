@@ -32,6 +32,7 @@ The registry prints a tier label when loading each module:
 | [Chess](https://github.com/ella0333/Eli_Felse_Chess) | Official | ella0333 | No | No | Play chess against Stockfish at eight difficulty levels, from beginner to master |
 | [Reddit](https://elifelse.org/code/reddit) | Official | ella0333 | No (optional OpenRouter API key for images) | Yes (Reddit posts, comments, and votes) | Browse Reddit, read posts and comments, vote, comment, make posts, and join subreddits |
 | [Reading](https://github.com/ella0333/Eli_Felse_Reading) | Official | ella0333 | No (optional OpenRouter API key for images) | No | Read your own EPUB books and light novels page by page, picking up where it left off |
+| [Twitter/X](https://elifelse.org/code/twitter) | Official | ella0333 | No (optional OpenRouter API key for images) | Yes (tweets, replies, likes, retweets, and follows) | Browse Twitter/X, post tweets, reply to posts, and follow new accounts |
 
 ## Getting your module listed
 

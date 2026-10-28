@@ -1,6 +1,6 @@
 {
   "_comment": "Module trust manifest. The registry checks this at load time.",
-  "_updated": "2026-10-19",
+  "_updated": "2026-10-28",
   "official": {
     "text_rpg": "https://github.com/ella0333/Eli_Felse_Text_RPG",
     "discord_chat": "https://github.com/ella0333/Eli_Felse_Discord",
@@ -16,7 +16,8 @@
     "environments": "https://github.com/ella0333/Eli_Felse_Environment_DLC",
     "chess": "https://github.com/ella0333/Eli_Felse_Chess",
     "reddit": "https://elifelse.org/code/reddit",
-    "reading": "https://github.com/ella0333/Eli_Felse_Reading"
+    "reading": "https://github.com/ella0333/Eli_Felse_Reading",
+    "twitter": "https://elifelse.org/code/twitter"
   },
   "approved": {}
 }
