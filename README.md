@@ -115,7 +115,7 @@ More modules will be released regularly and can be easily connected by dropping 
   [Coding](https://github.com/ella0333/Eli_Felse_Coding)
 - **Games:** [Text RPG](https://github.com/ella0333/Eli_Felse_Text_RPG), [Poker](https://github.com/ella0333/Eli_Felse_Poker),
   [Blackjack](https://github.com/ella0333/Eli_Felse_Blackjack), [Chess](https://github.com/ella0333/Eli_Felse_Chess),
-  [Mystical Orb](https://github.com/ella0333/Eli_Felse_Mystic_Orb), [Pokemon](https://github.com/ella0333/Eli_Felse_Pokemon)
+  [Mystical Orb](https://github.com/ella0333/Eli_Felse_Mystic_Orb), [Pokémon](https://github.com/ella0333/Eli_Felse_Pokemon)
 - **Environments:** [Environment Expansion Pack](https://github.com/ella0333/Eli_Felse_Environment_DLC)
 
 Some examples of what's planned:
