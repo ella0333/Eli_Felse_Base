@@ -33,6 +33,7 @@ The registry prints a tier label when loading each module:
 | [Reddit](https://elifelse.org/code/reddit) | Official | ella0333 | No (optional OpenRouter API key for images) | Yes (Reddit posts, comments, and votes) | Browse Reddit, read posts and comments, vote, comment, make posts, and join subreddits |
 | [Reading](https://github.com/ella0333/Eli_Felse_Reading) | Official | ella0333 | No (optional OpenRouter API key for images) | No | Read your own EPUB books and light novels page by page, picking up where it left off |
 | [Twitter/X](https://elifelse.org/code/twitter) | Official | ella0333 | No (optional OpenRouter API key for images) | Yes (tweets, replies, likes, retweets, and follows) | Browse Twitter/X, post tweets, reply to posts, and follow new accounts |
+| [Pokemon](https://github.com/ella0333/Eli_Felse_Pokemon) | Official | ella0333 | No (needs your own Pokemon Red or Blue ROM) | No | Play Pokemon Red or Blue on a Game Boy emulator, reading the screen as text and picking moves from a lettered list |
 
 ## Getting your module listed
 
